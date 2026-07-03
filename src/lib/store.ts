@@ -1,0 +1,186 @@
+import type { AuthSession, NewTimeLog, TimeLog } from "../types";
+import { formatDateInput, getLocalDayRange } from "./time";
+import { isSupabaseConfigured, supabase } from "./supabase";
+
+const LOCAL_STORAGE_KEY = "ezytime.logs.v1";
+
+function todayAt(hour: number, minute: number): string {
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
+}
+
+const demoLogs: TimeLog[] = [
+  {
+    id: "demo-1",
+    employee_name: "มะลิ",
+    position: "พนักงานเสิร์ฟ",
+    event_type: "clock_in",
+    scanned_at: todayAt(9, 2),
+    created_at: todayAt(9, 2),
+  },
+  {
+    id: "demo-2",
+    employee_name: "มะลิ",
+    position: "พนักงานเสิร์ฟ",
+    event_type: "clock_out",
+    scanned_at: todayAt(17, 11),
+    created_at: todayAt(17, 11),
+  },
+  {
+    id: "demo-3",
+    employee_name: "บีม",
+    position: "พนักงานสไลด์หมู",
+    event_type: "clock_in",
+    scanned_at: todayAt(10, 0),
+    created_at: todayAt(10, 0),
+  },
+  {
+    id: "demo-4",
+    employee_name: "นุ่น",
+    position: "พนักงานเตรียมของ",
+    event_type: "clock_in",
+    scanned_at: todayAt(8, 36),
+    created_at: todayAt(8, 36),
+  },
+  {
+    id: "demo-5",
+    employee_name: "นุ่น",
+    position: "พนักงานเตรียมของ",
+    event_type: "clock_out",
+    scanned_at: todayAt(16, 48),
+    created_at: todayAt(16, 48),
+  },
+];
+
+function readLocalLogs(): TimeLog[] {
+  const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (!raw) {
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(demoLogs));
+    return demoLogs;
+  }
+
+  try {
+    return JSON.parse(raw) as TimeLog[];
+  } catch {
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(demoLogs));
+    return demoLogs;
+  }
+}
+
+function writeLocalLogs(logs: TimeLog[]): void {
+  window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(logs));
+}
+
+export async function createTimeLog(input: NewTimeLog): Promise<TimeLog> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("time_logs")
+      .insert({
+        employee_name: input.employee_name.trim(),
+        position: input.position,
+        event_type: input.event_type,
+        scanned_at: input.scanned_at,
+      })
+      .select("*")
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  const now = new Date().toISOString();
+  const newLog: TimeLog = {
+    id: crypto.randomUUID(),
+    employee_name: input.employee_name.trim(),
+    position: input.position,
+    event_type: input.event_type,
+    scanned_at: input.scanned_at,
+    created_at: now,
+  };
+  const nextLogs = [...readLocalLogs(), newLog];
+  writeLocalLogs(nextLogs);
+  return newLog;
+}
+
+export async function fetchLogsByDate(dateInput: string): Promise<TimeLog[]> {
+  const { start, end } = getLocalDayRange(dateInput);
+
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("time_logs")
+      .select("*")
+      .gte("scanned_at", start.toISOString())
+      .lt("scanned_at", end.toISOString())
+      .order("scanned_at", { ascending: true });
+
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  }
+
+  return readLocalLogs()
+    .filter((log) => {
+      const timestamp = Date.parse(log.scanned_at);
+      return timestamp >= start.getTime() && timestamp < end.getTime();
+    })
+    .sort((first, second) => Date.parse(first.scanned_at) - Date.parse(second.scanned_at));
+}
+
+export function getDefaultDate(): string {
+  return formatDateInput(new Date());
+}
+
+export async function signInAdmin(email: string, password: string): Promise<AuthSession> {
+  if (!supabase) return { email: "demo@local", isDemo: true };
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
+
+  return { email: data.user.email ?? email, isDemo: false };
+}
+
+export async function signOutAdmin(): Promise<void> {
+  if (supabase) {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw new Error(error.message);
+  }
+}
+
+export async function getCurrentSession(): Promise<AuthSession | null> {
+  if (!isSupabaseConfigured || !supabase) return { email: "demo@local", isDemo: true };
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw new Error(error.message);
+  const email = data.session?.user.email;
+  return data.session ? { email: email ?? undefined, isDemo: false } : null;
+}
+
+export function onAuthChange(callback: (session: AuthSession | null) => void): () => void {
+  if (!supabase) return () => undefined;
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session ? { email: session.user.email ?? undefined, isDemo: false } : null);
+  });
+
+  return () => subscription.unsubscribe();
+}
+
+export function exportLogsCsv(rows: TimeLog[]): void {
+  const headers = ["ชื่อ", "ตำแหน่ง", "ประเภท", "เวลา"];
+  const csvRows = rows.map((log) =>
+    [log.employee_name, log.position, log.event_type === "clock_in" ? "เข้างาน" : "ออกงาน", log.scanned_at]
+      .map((value) => `"${value.replaceAll('"', '""')}"`)
+      .join(","),
+  );
+  const blob = new Blob([[headers.join(","), ...csvRows].join("\n")], {
+    type: "text/csv;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `ezytime-${formatDateInput(new Date())}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
