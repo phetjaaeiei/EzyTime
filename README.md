@@ -50,6 +50,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
    - โดเมนที่ deploy จริง เช่น `https://ezytime.phetjaa.workers.dev/clock`
    - `http://localhost:5173/clock` (สำหรับ dev บนเครื่อง)
 
+ถ้าเป็น Supabase project เดิมที่เคยรัน `schema.sql` เวอร์ชันก่อนหน้าไปแล้ว ต้องกลับไปรัน [supabase/schema.sql](supabase/schema.sql) เวอร์ชันล่าสุดใน Supabase SQL Editor อีกครั้งก่อน deploy build นี้ (สคริปต์เขียนให้รันซ้ำได้อย่างปลอดภัย) เพราะเวอร์ชันล่าสุดเพิ่มคอลัมน์ `time_logs.user_id` และเปลี่ยน insert policy ใหม่ ถ้าไม่รันซ้ำ พนักงานจะบันทึกเวลาเข้า-ออกงานไม่ได้เลยหลัง deploy
+
 พนักงานที่สแกน QR แล้วกด "เข้าสู่ระบบด้วย Google" ครั้งแรกจะถูกขอตั้งชื่อเล่นหนึ่งครั้ง ครั้งต่อไประบบจำได้อัตโนมัติ ไม่ต้องพิมพ์ชื่อซ้ำ
 
 ## Deploy ฟรี

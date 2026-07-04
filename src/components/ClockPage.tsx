@@ -66,6 +66,7 @@ function GoogleClockFlow() {
           setSession({ ...session, nickname });
           setIsEditingNickname(false);
         }}
+        onCancel={isEditingNickname ? () => setIsEditingNickname(false) : undefined}
       />
     );
   }
@@ -115,9 +116,11 @@ function GoogleSignInPanel() {
 function NicknameForm({
   initialValue,
   onSaved,
+  onCancel,
 }: {
   initialValue: string;
   onSaved: (nickname: string) => void;
+  onCancel?: () => void;
 }) {
   const [nickname, setNickname] = useState(initialValue);
   const [error, setError] = useState("");
@@ -177,6 +180,12 @@ function NicknameForm({
             {isSubmitting ? <Loader2 className="spin" size={18} /> : <BadgeCheck size={18} />}
             บันทึกชื่อเล่น
           </button>
+
+          {onCancel ? (
+            <button className="field-link-button" type="button" onClick={onCancel}>
+              ยกเลิก
+            </button>
+          ) : null}
         </form>
       </div>
     </section>

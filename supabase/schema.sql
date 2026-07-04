@@ -38,6 +38,7 @@ alter table public.time_logs enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant insert on public.time_logs to authenticated;
+revoke insert on public.time_logs from anon;
 grant select on public.time_logs to authenticated;
 grant select on public.admin_users to authenticated;
 
