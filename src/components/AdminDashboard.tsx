@@ -24,7 +24,7 @@ import {
   getDefaultDate,
   onAuthChange,
   signInAdmin,
-  signOutAdmin,
+  signOutCurrentUser,
 } from "../lib/store";
 import { isSupabaseConfigured } from "../lib/supabase";
 import {
@@ -198,7 +198,7 @@ function Dashboard({ session, onSignedOut }: { session: AuthSession; onSignedOut
   }
 
   async function handleSignOut() {
-    await signOutAdmin();
+    await signOutCurrentUser();
     onSignedOut();
   }
 

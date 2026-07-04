@@ -1,6 +1,6 @@
 # EzyTime
 
-ระบบบันทึกเวลาเข้าออกงานแบบง่ายสำหรับร้านขนาดเล็ก ใช้ QR ให้พนักงานเปิดหน้า `/clock` แล้วบันทึกเวลา ส่วน admin ดูสรุปรายวันที่หน้า `/`.
+ระบบบันทึกเวลาเข้าออกงานแบบง่ายสำหรับร้านขนาดเล็ก ใช้ QR ให้พนักงานเปิดหน้า `/clock`, เข้าสู่ระบบด้วย Google (ครั้งแรกตั้งชื่อเล่น ครั้งต่อไปจำได้เลย) แล้วบันทึกเวลาได้ทันที ส่วน admin ดูสรุปรายวันที่หน้า `/`.
 
 ## Stack
 
@@ -40,6 +40,20 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
 
 ห้ามใส่ secret key หรือ service role key ใน frontend. ถ้าใช้ Supabase project เก่าที่ยังมี legacy anon key สามารถใช้ `VITE_SUPABASE_ANON_KEY` แทนได้ชั่วคราว.
 
+## เปิดใช้ Google Login สำหรับพนักงาน
+
+1. ไปที่ [Google Cloud Console](https://console.cloud.google.com/) > APIs & Services > Credentials > Create OAuth client ID (เลือกประเภท Web application)
+2. ใส่ Authorized redirect URI เป็น `https://<your-project-ref>.supabase.co/auth/v1/callback`
+3. คัดลอก Client ID และ Client Secret ที่ได้
+4. ไปที่ Supabase Dashboard > Authentication > Providers > Google แล้ววางค่าทั้งสอง จากนั้นเปิดใช้งาน provider
+5. ไปที่ Supabase Dashboard > Authentication > URL Configuration แล้วเพิ่ม redirect URL ที่อนุญาต:
+   - โดเมนที่ deploy จริง เช่น `https://ezytime.phetjaa.workers.dev/clock`
+   - `http://localhost:5173/clock` (สำหรับ dev บนเครื่อง)
+
+ถ้าเป็น Supabase project เดิมที่เคยรัน `schema.sql` เวอร์ชันก่อนหน้าไปแล้ว ต้องกลับไปรัน [supabase/schema.sql](supabase/schema.sql) เวอร์ชันล่าสุดใน Supabase SQL Editor อีกครั้งก่อน deploy build นี้ (สคริปต์เขียนให้รันซ้ำได้อย่างปลอดภัย) เพราะเวอร์ชันล่าสุดเพิ่มคอลัมน์ `time_logs.user_id` และเปลี่ยน insert policy ใหม่ ถ้าไม่รันซ้ำ พนักงานจะบันทึกเวลาเข้า-ออกงานไม่ได้เลยหลัง deploy
+
+พนักงานที่สแกน QR แล้วกด "เข้าสู่ระบบด้วย Google" ครั้งแรกจะถูกขอตั้งชื่อเล่นหนึ่งครั้ง ครั้งต่อไประบบจำได้อัตโนมัติ ไม่ต้องพิมพ์ชื่อซ้ำ
+
 ## Deploy ฟรี
 
 ### Frontend บน Cloudflare Workers Static Assets
@@ -57,7 +71,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
 
 ใช้ schema ที่ให้ไว้พร้อม RLS:
 
-- คนที่ scan QR insert `time_logs` ได้เท่านั้น
+- พนักงานต้องเข้าสู่ระบบด้วย Google ก่อนถึงจะ insert `time_logs` ได้ ผูกกับ `user_id` ของตัวเองเสมอ
 - เฉพาะ Supabase Auth user ที่ถูกเพิ่มใน `admin_users` จึงอ่านรายงานได้
 
 ## Commands
