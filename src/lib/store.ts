@@ -155,13 +155,24 @@ export async function signOutCurrentUser(): Promise<void> {
   }
 }
 
+async function isAdminUser(userId: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { data, error } = await supabase.from("admin_users").select("user_id").eq("user_id", userId).maybeSingle();
+  if (error) return false;
+  return Boolean(data);
+}
+
 export async function getCurrentSession(): Promise<AuthSession | null> {
   if (!isSupabaseConfigured || !supabase) return { email: "demo@local", isDemo: true };
 
   const { data, error } = await supabase.auth.getSession();
   if (error) throw new Error(error.message);
-  const email = data.session?.user.email;
-  return data.session ? { email: email ?? undefined, isDemo: false } : null;
+  if (!data.session) return null;
+
+  const isAdmin = await isAdminUser(data.session.user.id);
+  if (!isAdmin) return null;
+
+  return { email: data.session.user.email ?? undefined, isDemo: false };
 }
 
 export function onAuthChange(callback: (session: AuthSession | null) => void): () => void {
@@ -170,7 +181,14 @@ export function onAuthChange(callback: (session: AuthSession | null) => void): (
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session ? { email: session.user.email ?? undefined, isDemo: false } : null);
+    if (!session) {
+      callback(null);
+      return;
+    }
+
+    isAdminUser(session.user.id).then((isAdmin) => {
+      callback(isAdmin ? { email: session.user.email ?? undefined, isDemo: false } : null);
+    });
   });
 
   return () => subscription.unsubscribe();
