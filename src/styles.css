@@ -159,7 +159,7 @@ p {
   text-align: left;
 }
 
-.brand-button:hover {
+button.brand-button:hover {
   background: var(--surface);
 }
 

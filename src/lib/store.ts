@@ -73,29 +73,36 @@ function writeLocalLogs(logs: TimeLog[]): void {
 }
 
 export async function createTimeLog(input: NewTimeLog): Promise<TimeLog> {
+  const scannedAt = input.scanned_at;
+  const employeeName = input.employee_name.trim();
+
   if (supabase) {
-    const { data, error } = await supabase
-      .from("time_logs")
-      .insert({
-        employee_name: input.employee_name.trim(),
-        position: input.position,
-        event_type: input.event_type,
-        scanned_at: input.scanned_at,
-      })
-      .select("*")
-      .single();
+    const { error } = await supabase.from("time_logs").insert({
+      employee_name: employeeName,
+      position: input.position,
+      event_type: input.event_type,
+      scanned_at: scannedAt,
+    });
 
     if (error) throw new Error(error.message);
-    return data;
+
+    return {
+      id: crypto.randomUUID(),
+      employee_name: employeeName,
+      position: input.position,
+      event_type: input.event_type,
+      scanned_at: scannedAt,
+      created_at: new Date().toISOString(),
+    };
   }
 
   const now = new Date().toISOString();
   const newLog: TimeLog = {
     id: crypto.randomUUID(),
-    employee_name: input.employee_name.trim(),
+    employee_name: employeeName,
     position: input.position,
     event_type: input.event_type,
-    scanned_at: input.scanned_at,
+    scanned_at: scannedAt,
     created_at: now,
   };
   const nextLogs = [...readLocalLogs(), newLog];

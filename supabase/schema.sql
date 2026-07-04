@@ -30,6 +30,11 @@ create index if not exists time_logs_employee_day_idx on public.time_logs (emplo
 alter table public.admin_users enable row level security;
 alter table public.time_logs enable row level security;
 
+grant usage on schema public to anon, authenticated;
+grant insert on public.time_logs to anon, authenticated;
+grant select on public.time_logs to authenticated;
+grant select on public.admin_users to authenticated;
+
 drop policy if exists "Admins can read their admin profile" on public.admin_users;
 create policy "Admins can read their admin profile"
 on public.admin_users
