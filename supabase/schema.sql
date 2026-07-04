@@ -20,9 +20,15 @@ create table if not exists public.time_logs (
     )
   ),
   event_type text not null check (event_type in ('clock_in', 'clock_out')),
+  user_id uuid references auth.users(id),
   scanned_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+-- Projects created before Google login shipped: add the column if the
+-- table already existed without it.
+alter table public.time_logs
+  add column if not exists user_id uuid references auth.users(id);
 
 create index if not exists time_logs_scanned_at_idx on public.time_logs (scanned_at);
 create index if not exists time_logs_employee_day_idx on public.time_logs (employee_name, position, scanned_at);
@@ -31,7 +37,7 @@ alter table public.admin_users enable row level security;
 alter table public.time_logs enable row level security;
 
 grant usage on schema public to anon, authenticated;
-grant insert on public.time_logs to anon, authenticated;
+grant insert on public.time_logs to authenticated;
 grant select on public.time_logs to authenticated;
 grant select on public.admin_users to authenticated;
 
@@ -43,11 +49,12 @@ to authenticated
 using (user_id = auth.uid());
 
 drop policy if exists "Anyone can submit QR time logs" on public.time_logs;
-create policy "Anyone can submit QR time logs"
+drop policy if exists "Authenticated employees can submit their own time logs" on public.time_logs;
+create policy "Authenticated employees can submit their own time logs"
 on public.time_logs
 for insert
-to anon, authenticated
-with check (true);
+to authenticated
+with check (user_id = auth.uid());
 
 drop policy if exists "Admins can read time logs" on public.time_logs;
 create policy "Admins can read time logs"
