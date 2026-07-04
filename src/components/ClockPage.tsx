@@ -11,7 +11,12 @@ import {
   UserRound,
 } from "lucide-react";
 import { POSITIONS, type EventType, type Position, type TimeLog } from "../types";
-import { createTimeLog } from "../lib/store";
+import {
+  createTimeLog,
+  getSavedEmployeeProfiles,
+  rememberEmployeeProfile,
+  type SavedEmployeeProfile,
+} from "../lib/store";
 import { formatDateTime, formatTime, getEventLabel } from "../lib/time";
 
 const defaultPosition: Position = POSITIONS[0];
@@ -24,6 +29,10 @@ export default function ClockPage() {
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [savedLog, setSavedLog] = useState<TimeLog | null>(null);
+  const [savedProfiles, setSavedProfiles] = useState<SavedEmployeeProfile[]>(getSavedEmployeeProfiles);
+  const [isManualNameEntry, setIsManualNameEntry] = useState(false);
+
+  const shouldUseSavedNameSelect = eventType === "clock_out" && savedProfiles.length > 0 && !isManualNameEntry;
 
   const eventCopy = useMemo(
     () =>
@@ -44,7 +53,7 @@ export default function ClockPage() {
     setError("");
 
     if (employeeName.trim().length < 2) {
-      setError("กรุณากรอกชื่ออย่างน้อย 2 ตัวอักษร");
+      setError(shouldUseSavedNameSelect ? "กรุณาเลือกชื่อของตัวเอง" : "กรุณากรอกชื่ออย่างน้อย 2 ตัวอักษร");
       return;
     }
 
@@ -57,7 +66,9 @@ export default function ClockPage() {
         scanned_at: scanTime.toISOString(),
       });
       setSavedLog(log);
+      setSavedProfiles(rememberEmployeeProfile(log.employee_name, log.position));
       setEmployeeName("");
+      setIsManualNameEntry(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง");
     } finally {
@@ -69,6 +80,20 @@ export default function ClockPage() {
     setSavedLog(null);
     setError("");
     setScanTime(new Date());
+  }
+
+  function updateEventType(nextEventType: EventType) {
+    setEventType(nextEventType);
+    setEmployeeName("");
+    setPosition(defaultPosition);
+    setError("");
+    setIsManualNameEntry(false);
+  }
+
+  function handleSavedProfileChange(profileName: string) {
+    setEmployeeName(profileName);
+    const savedProfile = savedProfiles.find((profile) => profile.name === profileName);
+    if (savedProfile) setPosition(savedProfile.position);
   }
 
   return (
@@ -113,7 +138,7 @@ export default function ClockPage() {
               <button
                 className={eventType === "clock_in" ? "segment is-selected" : "segment"}
                 type="button"
-                onClick={() => setEventType("clock_in")}
+                onClick={() => updateEventType("clock_in")}
               >
                 <LogIn size={17} />
                 เข้างาน
@@ -121,7 +146,7 @@ export default function ClockPage() {
               <button
                 className={eventType === "clock_out" ? "segment is-selected" : "segment"}
                 type="button"
-                onClick={() => setEventType("clock_out")}
+                onClick={() => updateEventType("clock_out")}
               >
                 <LogOut size={17} />
                 ออกงาน
@@ -133,13 +158,50 @@ export default function ClockPage() {
                 <UserRound size={16} />
                 ชื่อ
               </span>
-              <input
-                autoComplete="name"
-                inputMode="text"
-                placeholder="เช่น มะลิ"
-                value={employeeName}
-                onChange={(event) => setEmployeeName(event.target.value)}
-              />
+              {shouldUseSavedNameSelect ? (
+                <>
+                  <select value={employeeName} onChange={(event) => handleSavedProfileChange(event.target.value)}>
+                    <option value="">เลือกชื่อของตัวเอง</option>
+                    {savedProfiles.map((profile) => (
+                      <option key={`${profile.name}-${profile.position}`} value={profile.name}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="field-link-button"
+                    type="button"
+                    onClick={() => {
+                      setEmployeeName("");
+                      setIsManualNameEntry(true);
+                    }}
+                  >
+                    ไม่เจอชื่อ? กรอกชื่อเอง
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    autoComplete="name"
+                    inputMode="text"
+                    placeholder="เช่น มะลิ"
+                    value={employeeName}
+                    onChange={(event) => setEmployeeName(event.target.value)}
+                  />
+                  {eventType === "clock_out" && savedProfiles.length > 0 ? (
+                    <button
+                      className="field-link-button"
+                      type="button"
+                      onClick={() => {
+                        setEmployeeName("");
+                        setIsManualNameEntry(false);
+                      }}
+                    >
+                      กลับไปเลือกชื่อจากรายการ
+                    </button>
+                  ) : null}
+                </>
+              )}
             </label>
 
             <label className="field">

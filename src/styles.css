@@ -411,6 +411,21 @@ button.brand-button:hover {
   font-weight: 700;
 }
 
+.field-link-button {
+  justify-self: start;
+  min-height: 32px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--primary-strong);
+  padding: 0 var(--space-xs);
+  font-size: 0.875rem;
+  font-weight: 720;
+}
+
+.field-link-button:hover {
+  background: var(--primary-soft);
+}
+
 .primary-button,
 .icon-text-button,
 .icon-button {

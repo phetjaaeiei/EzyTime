@@ -1,8 +1,15 @@
-import type { AuthSession, NewTimeLog, TimeLog } from "../types";
+import { POSITIONS, type AuthSession, type NewTimeLog, type Position, type TimeLog } from "../types";
 import { formatDateInput, getLocalDayRange } from "./time";
 import { isSupabaseConfigured, supabase } from "./supabase";
 
 const LOCAL_STORAGE_KEY = "ezytime.logs.v1";
+const EMPLOYEE_PROFILES_KEY = "ezytime.employeeProfiles.v1";
+
+export interface SavedEmployeeProfile {
+  name: string;
+  position: Position;
+  lastUsedAt: string;
+}
 
 function todayAt(hour: number, minute: number): string {
   const date = new Date();
@@ -70,6 +77,55 @@ function readLocalLogs(): TimeLog[] {
 
 function writeLocalLogs(logs: TimeLog[]): void {
   window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(logs));
+}
+
+function isPosition(value: unknown): value is Position {
+  return typeof value === "string" && POSITIONS.includes(value as Position);
+}
+
+function normalizeEmployeeName(name: string): string {
+  return name.trim().toLocaleLowerCase("th-TH");
+}
+
+export function getSavedEmployeeProfiles(): SavedEmployeeProfile[] {
+  const raw = window.localStorage.getItem(EMPLOYEE_PROFILES_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw) as Array<Partial<SavedEmployeeProfile>>;
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter(
+        (profile): profile is SavedEmployeeProfile =>
+          typeof profile.name === "string" &&
+          profile.name.trim().length >= 2 &&
+          isPosition(profile.position) &&
+          typeof profile.lastUsedAt === "string",
+      )
+      .sort((first, second) => Date.parse(second.lastUsedAt) - Date.parse(first.lastUsedAt));
+  } catch {
+    window.localStorage.removeItem(EMPLOYEE_PROFILES_KEY);
+    return [];
+  }
+}
+
+export function rememberEmployeeProfile(name: string, position: Position): SavedEmployeeProfile[] {
+  const trimmedName = name.trim();
+  if (trimmedName.length < 2) return getSavedEmployeeProfiles();
+
+  const normalizedName = normalizeEmployeeName(trimmedName);
+  const nextProfiles = [
+    {
+      name: trimmedName,
+      position,
+      lastUsedAt: new Date().toISOString(),
+    },
+    ...getSavedEmployeeProfiles().filter((profile) => normalizeEmployeeName(profile.name) !== normalizedName),
+  ].slice(0, 50);
+
+  window.localStorage.setItem(EMPLOYEE_PROFILES_KEY, JSON.stringify(nextProfiles));
+  return nextProfiles;
 }
 
 export async function createTimeLog(input: NewTimeLog): Promise<TimeLog> {
