@@ -1,15 +1,9 @@
-import { POSITIONS, type AuthSession, type NewTimeLog, type Position, type TimeLog } from "../types";
+import type { AuthSession, EmployeeSession, NewTimeLog, TimeLog } from "../types";
 import { formatDateInput, getLocalDayRange } from "./time";
+import { extractNickname } from "./employee";
 import { isSupabaseConfigured, supabase } from "./supabase";
 
 const LOCAL_STORAGE_KEY = "ezytime.logs.v1";
-const EMPLOYEE_PROFILES_KEY = "ezytime.employeeProfiles.v1";
-
-export interface SavedEmployeeProfile {
-  name: string;
-  position: Position;
-  lastUsedAt: string;
-}
 
 function todayAt(hour: number, minute: number): string {
   const date = new Date();
@@ -79,55 +73,6 @@ function writeLocalLogs(logs: TimeLog[]): void {
   window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(logs));
 }
 
-function isPosition(value: unknown): value is Position {
-  return typeof value === "string" && POSITIONS.includes(value as Position);
-}
-
-function normalizeEmployeeName(name: string): string {
-  return name.trim().toLocaleLowerCase("th-TH");
-}
-
-export function getSavedEmployeeProfiles(): SavedEmployeeProfile[] {
-  const raw = window.localStorage.getItem(EMPLOYEE_PROFILES_KEY);
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw) as Array<Partial<SavedEmployeeProfile>>;
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .filter(
-        (profile): profile is SavedEmployeeProfile =>
-          typeof profile.name === "string" &&
-          profile.name.trim().length >= 2 &&
-          isPosition(profile.position) &&
-          typeof profile.lastUsedAt === "string",
-      )
-      .sort((first, second) => Date.parse(second.lastUsedAt) - Date.parse(first.lastUsedAt));
-  } catch {
-    window.localStorage.removeItem(EMPLOYEE_PROFILES_KEY);
-    return [];
-  }
-}
-
-export function rememberEmployeeProfile(name: string, position: Position): SavedEmployeeProfile[] {
-  const trimmedName = name.trim();
-  if (trimmedName.length < 2) return getSavedEmployeeProfiles();
-
-  const normalizedName = normalizeEmployeeName(trimmedName);
-  const nextProfiles = [
-    {
-      name: trimmedName,
-      position,
-      lastUsedAt: new Date().toISOString(),
-    },
-    ...getSavedEmployeeProfiles().filter((profile) => normalizeEmployeeName(profile.name) !== normalizedName),
-  ].slice(0, 50);
-
-  window.localStorage.setItem(EMPLOYEE_PROFILES_KEY, JSON.stringify(nextProfiles));
-  return nextProfiles;
-}
-
 export async function createTimeLog(input: NewTimeLog): Promise<TimeLog> {
   const scannedAt = input.scanned_at;
   const employeeName = input.employee_name.trim();
@@ -138,6 +83,7 @@ export async function createTimeLog(input: NewTimeLog): Promise<TimeLog> {
       position: input.position,
       event_type: input.event_type,
       scanned_at: scannedAt,
+      user_id: input.user_id,
     });
 
     if (error) throw new Error(error.message);
@@ -202,7 +148,7 @@ export async function signInAdmin(email: string, password: string): Promise<Auth
   return { email: data.user.email ?? email, isDemo: false };
 }
 
-export async function signOutAdmin(): Promise<void> {
+export async function signOutCurrentUser(): Promise<void> {
   if (supabase) {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(error.message);
@@ -228,6 +174,46 @@ export function onAuthChange(callback: (session: AuthSession | null) => void): (
   });
 
   return () => subscription.unsubscribe();
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${window.location.origin}/clock` },
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function getEmployeeSession(): Promise<EmployeeSession | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw new Error(error.message);
+  if (!data.session) return null;
+  return {
+    userId: data.session.user.id,
+    nickname: extractNickname(data.session.user.user_metadata),
+  };
+}
+
+export function onEmployeeAuthChange(callback: (session: EmployeeSession | null) => void): () => void {
+  if (!supabase) return () => undefined;
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(
+      session ? { userId: session.user.id, nickname: extractNickname(session.user.user_metadata) } : null,
+    );
+  });
+
+  return () => subscription.unsubscribe();
+}
+
+export async function updateEmployeeNickname(nickname: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.auth.updateUser({ data: { nickname: nickname.trim() } });
+  if (error) throw new Error(error.message);
 }
 
 export function exportLogsCsv(rows: TimeLog[]): void {

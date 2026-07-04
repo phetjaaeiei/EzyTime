@@ -23,6 +23,7 @@ export interface NewTimeLog {
   position: Position;
   event_type: EventType;
   scanned_at: string;
+  user_id?: string;
 }
 
 export interface SummaryRow {
@@ -39,4 +40,9 @@ export interface SummaryRow {
 export interface AuthSession {
   email?: string;
   isDemo: boolean;
+}
+
+export interface EmployeeSession {
+  userId: string;
+  nickname: string | null;
 }
