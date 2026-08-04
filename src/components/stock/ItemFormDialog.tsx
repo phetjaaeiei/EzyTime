@@ -1,23 +1,24 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Loader2, Save, X } from "lucide-react";
-import type { NewStockItem, StockItem } from "../../types";
-import { archiveItem, createItem, recordMovement, updateItem } from "../../lib/stock";
+import type { ItemBalance, NewStockItem, StockItem } from "../../types";
+import { archiveItem, createItem, setStockBalanceTotals, updateItem } from "../../lib/stock";
 import { formatQuantity } from "../../lib/stock.calc";
 
 interface Props {
   item?: StockItem;
-  currentOnHand?: number;
+  balance?: ItemBalance;
   categorySuggestions: string[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function ItemFormDialog({ item, currentOnHand, categorySuggestions, onClose, onSaved }: Props) {
+export default function ItemFormDialog({ item, balance, categorySuggestions, onClose, onSaved }: Props) {
   const [name, setName] = useState(item?.name ?? "");
   const [unit, setUnit] = useState(item?.unit ?? "กก.");
   const [category, setCategory] = useState(item?.category ?? "");
   const [threshold, setThreshold] = useState(item?.low_stock_threshold?.toString() ?? "");
-  const [onHand, setOnHand] = useState(currentOnHand?.toString() ?? "");
+  const [received, setReceived] = useState(balance?.received.toString() ?? "");
+  const [onHand, setOnHand] = useState(balance?.onHand.toString() ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -40,9 +41,18 @@ export default function ItemFormDialog({ item, currentOnHand, categorySuggestion
       setError("จุดแจ้งเตือนต้องเป็นตัวเลขที่ไม่ติดลบ");
       return;
     }
+    const desiredReceived = item ? Number(received) : null;
     const desiredOnHand = item ? Number(onHand) : null;
-    if (item && (desiredOnHand === null || !Number.isFinite(desiredOnHand) || desiredOnHand < 0)) {
-      setError("จำนวนคงเหลือต้องเป็นตัวเลขที่ไม่ติดลบ");
+    if (
+      item &&
+      (desiredReceived === null || !Number.isFinite(desiredReceived) || desiredReceived < 0 ||
+        desiredOnHand === null || !Number.isFinite(desiredOnHand) || desiredOnHand < 0)
+    ) {
+      setError("จำนวนรับเข้าและคงเหลือต้องเป็นตัวเลขที่ไม่ติดลบ");
+      return;
+    }
+    if (item && balance && desiredReceived !== null && desiredOnHand !== null && desiredReceived < desiredOnHand + balance.waste) {
+      setError(`จำนวนรับเข้าต้องไม่น้อยกว่า ${formatQuantity(desiredOnHand + balance.waste)} ${unit.trim() || item.unit}`);
       return;
     }
     setError("");
@@ -50,16 +60,8 @@ export default function ItemFormDialog({ item, currentOnHand, categorySuggestion
     try {
       if (item) {
         await updateItem(item.id, payload);
-        const current = currentOnHand ?? 0;
-        const target = desiredOnHand ?? current;
-        const difference = target - current;
-        if (Math.abs(difference) > 1e-9) {
-          await recordMovement({
-            item_id: item.id,
-            type: difference > 0 ? "in" : "out",
-            quantity: Math.abs(difference),
-            note: `ปรับยอดคงเหลือจาก ${formatQuantity(current)} เป็น ${formatQuantity(target)}`,
-          });
+        if (balance && desiredReceived !== null && desiredOnHand !== null) {
+          await setStockBalanceTotals(balance, desiredReceived, desiredOnHand);
         }
       } else {
         await createItem(payload);
@@ -97,13 +99,18 @@ export default function ItemFormDialog({ item, currentOnHand, categorySuggestion
           <input list="stock-cats" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="เช่น เนื้อ / ผัก" />
           <datalist id="stock-cats">{categorySuggestions.map((c) => <option key={c} value={c} />)}</datalist>
         </label>
-        {item ? (
-          <label className="field stock-on-hand-field"><span>จำนวนคงเหลือ ({unit.trim() || item.unit})</span>
-            <input type="number" min="0" step="any" value={onHand} onChange={(e) => setOnHand(e.target.value)} required />
+        {item && balance ? (
+          <div className="stock-balance-editor">
+            <label className="field"><span>รับเข้าทั้งหมด ({unit.trim() || item.unit})</span>
+              <input type="number" min="0" step="any" value={received} onChange={(e) => setReceived(e.target.value)} required />
+            </label>
+            <label className="field"><span>จำนวนคงเหลือ ({unit.trim() || item.unit})</span>
+              <input type="number" min="0" step="any" value={onHand} onChange={(e) => setOnHand(e.target.value)} required />
+            </label>
             <small className="field-hint">
-              ปัจจุบัน {formatQuantity(currentOnHand ?? 0)} {item.unit} ระบบจะบันทึกส่วนต่างไว้ในประวัติ
+              ของเสียสะสม {formatQuantity(balance.waste)} {item.unit} ระบบจะคำนวณยอดเบิกใช้และปรับประวัติให้ตรงกับจำนวนใหม่
             </small>
-          </label>
+          </div>
         ) : null}
         <label className="field"><span>แจ้งเตือนเมื่อเหลือน้อยกว่า (ไม่บังคับ)</span>
           <input type="number" min="0" step="any" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="เช่น 5" />

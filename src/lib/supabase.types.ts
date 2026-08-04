@@ -22,7 +22,10 @@ export interface Database {
           scanned_at?: string;
           created_at?: string;
         };
-        Update: never;
+        Update: Partial<{
+          quantity: number;
+          note: string | null;
+        }>;
       };
       admin_users: {
         Row: {

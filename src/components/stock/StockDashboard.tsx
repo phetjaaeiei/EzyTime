@@ -153,7 +153,7 @@ export default function StockDashboard() {
       {editing ? (
         <ItemFormDialog
           item={editing === "new" ? undefined : editing}
-          currentOnHand={editing === "new" ? undefined : balances.find((balance) => balance.item.id === editing.id)?.onHand ?? 0}
+          balance={editing === "new" ? undefined : balances.find((balance) => balance.item.id === editing.id)}
           categorySuggestions={categories}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); void reload(); }}

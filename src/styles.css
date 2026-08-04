@@ -1366,7 +1366,8 @@ tbody tr:hover {
 /* ===== Stock: archived item ===== */
 .stock-card.is-archived { opacity: 0.6; }
 .stock-chip.muted { background: color-mix(in oklab, var(--ink) 10%, transparent); color: var(--ink); }
-.stock-on-hand-field { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px; }
+.stock-balance-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px; }
+.stock-balance-editor .field-hint { grid-column: 1 / -1; }
 .field-hint { color: var(--muted); font-size: 0.75rem; font-weight: 520; line-height: 1.45; }
 .stock-clear-history-button { color: var(--danger); }
 .stock-clear-history-button:hover:not(:disabled) { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
@@ -1417,6 +1418,9 @@ tbody tr:hover {
 }
 
 @media (max-width: 720px) {
+  .stock-balance-editor { grid-template-columns: minmax(0, 1fr); }
+  .stock-balance-editor .field-hint { grid-column: 1; }
+
   .stock-card-grid {
     grid-template-columns: 1fr;
   }

@@ -249,6 +249,82 @@ export async function recordMovement(input: NewMovement): Promise<StockMovement>
   return movement;
 }
 
+export async function setStockBalanceTotals(
+  balance: ItemBalance,
+  targetReceived: number,
+  targetOnHand: number,
+): Promise<void> {
+  const targetWithdrawn = targetReceived - targetOnHand - balance.waste;
+  if (targetReceived < 0 || targetOnHand < 0 || targetWithdrawn < -1e-9) {
+    throw new Error("จำนวนรับเข้าไม่เพียงพอสำหรับยอดคงเหลือและของเสีย");
+  }
+
+  await reconcileMovementTotal(
+    balance.item.id,
+    "in",
+    targetReceived,
+    balance.received,
+    `ปรับยอดรับเข้าทั้งหมดเป็น ${targetReceived}`,
+  );
+  await reconcileMovementTotal(
+    balance.item.id,
+    "out",
+    Math.max(0, targetWithdrawn),
+    balance.withdrawn,
+    `ปรับยอดเบิกใช้เพื่อให้คงเหลือ ${targetOnHand}`,
+  );
+}
+
+async function reconcileMovementTotal(
+  itemId: string,
+  type: StockMovement["type"],
+  target: number,
+  current: number,
+  note: string,
+): Promise<void> {
+  const difference = target - current;
+  if (Math.abs(difference) <= 1e-9) return;
+  if (difference > 0) {
+    await recordMovement({ item_id: itemId, type, quantity: difference, note });
+    return;
+  }
+
+  let remainingReduction = Math.abs(difference);
+  const movements = (await listMovements({ itemId })).filter((movement) => movement.type === type);
+  for (const movement of movements) {
+    if (remainingReduction <= 1e-9) break;
+    if (movement.quantity <= remainingReduction + 1e-9) {
+      remainingReduction -= movement.quantity;
+      await deleteMovement(movement.id);
+    } else {
+      await updateMovementQuantity(movement.id, movement.quantity - remainingReduction);
+      remainingReduction = 0;
+    }
+  }
+  if (remainingReduction > 1e-9) throw new Error("ปรับยอดสต๊อกไม่สำเร็จ กรุณารีเฟรชแล้วลองอีกครั้ง");
+}
+
+async function updateMovementQuantity(id: string, quantity: number): Promise<void> {
+  if (supabase) {
+    const { error } = await supabase.from("stock_movements").update({ quantity }).eq("id", id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  const movements = readLocal(MOVES_KEY, demoMovements).map((movement) =>
+    movement.id === id ? { ...movement, quantity } : movement,
+  );
+  writeLocal(MOVES_KEY, movements);
+}
+
+async function deleteMovement(id: string): Promise<void> {
+  if (supabase) {
+    const { error } = await supabase.from("stock_movements").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  writeLocal(MOVES_KEY, readLocal(MOVES_KEY, demoMovements).filter((movement) => movement.id !== id));
+}
+
 export function isOpeningBalanceMovement(movement: StockMovement): boolean {
   return movement.note === OPENING_BALANCE_NOTE;
 }
