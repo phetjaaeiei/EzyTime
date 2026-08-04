@@ -1035,9 +1035,10 @@ tbody tr:hover {
 .stock-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 24px; }
 .stock-unit-overview { min-width: 0; border-top: 1px solid var(--border); padding-top: 16px; }
 .stock-unit-overview h3,
-.stock-bar-list { width: min(100%, 760px); margin-right: auto; margin-left: auto; }
+.stock-bar-list,
+.stock-bar-axis { width: min(100%, 960px); margin-right: auto; margin-left: auto; }
 .stock-unit-overview h3 { margin-top: 0; margin-bottom: 16px; color: var(--muted); font-size: 0.9rem; }
-.stock-bar-list { display: grid; gap: 16px; padding: 0; list-style: none; }
+.stock-bar-list { display: grid; gap: 14px; padding: 0; list-style: none; }
 .stock-bar-list li { --stock-bar-color: #087f87; }
 .stock-bar-list .stock-bar-color-0 { --stock-bar-color: #087f87; }
 .stock-bar-list .stock-bar-color-1 { --stock-bar-color: #376eb5; }
@@ -1049,12 +1050,19 @@ tbody tr:hover {
 .stock-bar-list .stock-bar-color-7 { --stock-bar-color: #267896; }
 .stock-bar-list .stock-bar-color-8 { --stock-bar-color: #81513c; }
 .stock-bar-list .stock-bar-color-9 { --stock-bar-color: #576777; }
-.stock-bar-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 7px; }
+.stock-bar-row { display: grid; grid-template-columns: minmax(120px, 180px) minmax(240px, 1fr) minmax(72px, max-content); align-items: center; gap: 14px; }
 .stock-bar-name { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 720; overflow-wrap: anywhere; }
 .stock-bar-name small { flex: 0 0 auto; border-radius: 999px; background: var(--danger-soft); color: var(--danger); padding: 2px 7px; font-size: 0.7rem; font-weight: 760; }
-.stock-bar-heading strong { flex: 0 0 auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.stock-bar-track { height: 12px; overflow: hidden; border-radius: 4px; background: color-mix(in oklab, var(--stock-bar-color) 18%, white); }
-.stock-bar-fill { display: block; height: 100%; border-radius: inherit; background: var(--stock-bar-color); }
+.stock-bar-value { justify-self: end; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stock-bar-track { position: relative; height: 16px; overflow: hidden; border-radius: 4px; background: color-mix(in oklab, var(--stock-bar-color) 18%, white); }
+.stock-bar-fill { position: absolute; inset: 0 auto 0 0; z-index: 1; display: block; border-radius: inherit; background: var(--stock-bar-color); }
+.stock-bar-gridline { position: absolute; top: 0; bottom: 0; z-index: 2; width: 1px; background: rgb(255 255 255 / 0.55); pointer-events: none; }
+.stock-bar-axis { display: grid; grid-template-columns: minmax(120px, 180px) minmax(240px, 1fr) minmax(72px, max-content); column-gap: 14px; margin-top: 9px; }
+.stock-bar-scale { position: relative; grid-column: 2; height: 20px; border-top: 1px solid var(--border); }
+.stock-bar-scale span { position: absolute; top: 4px; transform: translateX(-50%); color: var(--muted); font-size: 0.7rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stock-bar-scale b { font: inherit; }
+.stock-bar-scale span.is-last { transform: translateX(-100%); }
+.stock-bar-axis p { grid-column: 2; margin: 4px 0 0; color: var(--muted); font-size: 0.75rem; }
 
 /* ===== Stock: module switcher + cards ===== */
 .module-switcher { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border-radius: 10px; margin: 0 0 20px; }
@@ -1119,9 +1127,21 @@ tbody tr:hover {
   .stock-overview-head { flex-direction: column; }
   .stock-daily-summary { justify-content: flex-start; }
   .stock-bar-list { gap: 14px; }
+  .stock-bar-row { grid-template-columns: minmax(0, 1fr) max-content; gap: 7px 12px; }
+  .stock-bar-name { grid-column: 1; }
+  .stock-bar-value { grid-column: 2; }
+  .stock-bar-track { grid-column: 1 / -1; grid-row: 2; }
+  .stock-bar-axis { grid-template-columns: 1fr; }
+  .stock-bar-scale,
+  .stock-bar-axis p { grid-column: 1; }
+  .stock-bar-scale b { display: none; }
 }
 
 @media (max-width: 340px) {
+  .stock-bar-scale span {
+    font-size: 0.625rem;
+  }
+
   .stock-card-body {
     grid-template-columns: 1fr;
     justify-items: center;

@@ -6,6 +6,8 @@ interface Props {
   daily: DailyStockStats;
 }
 
+const PERCENT_TICKS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
 export default function StockOverviewChart({ balances, daily }: Props) {
   const groups = groupByUnit(balances);
 
@@ -47,27 +49,40 @@ function UnitBarChart({ unit, balances }: { unit: string; balances: ItemBalance[
           const className = `stock-bar-color-${colorIndex(balance.item.id)}${balance.isLow ? " is-low" : ""}`;
           return (
             <li key={balance.item.id} className={className}>
-              <div className="stock-bar-heading">
+              <div className="stock-bar-row">
                 <span className="stock-bar-name">
                   {balance.item.name}
                   {balance.isLow ? <small>ใกล้หมด</small> : null}
                 </span>
-                <strong>{formatQuantity(balance.onHand)} {unit}</strong>
-              </div>
-              <div
-                className="stock-bar-track"
-                role="meter"
-                aria-label={`${balance.item.name} คงเหลือ ${formatQuantity(balance.onHand)} ${unit}`}
-                aria-valuemin={0}
-                aria-valuemax={Math.max(1, maxValue)}
-                aria-valuenow={value}
-              >
-                <span className="stock-bar-fill" style={{ width: `${percent}%` }} />
+                <div
+                  className="stock-bar-track"
+                  role="meter"
+                  aria-label={`${balance.item.name} คงเหลือ ${formatQuantity(balance.onHand)} ${unit}`}
+                  aria-valuemin={0}
+                  aria-valuemax={Math.max(1, maxValue)}
+                  aria-valuenow={value}
+                >
+                  <span className="stock-bar-fill" style={{ width: `${percent}%` }} />
+                  {PERCENT_TICKS.slice(0, -1).map((tick) => (
+                    <i key={tick} className="stock-bar-gridline" style={{ left: `${tick}%` }} />
+                  ))}
+                </div>
+                <strong className="stock-bar-value">{formatQuantity(balance.onHand)} {unit}</strong>
               </div>
             </li>
           );
         })}
       </ol>
+      <div className="stock-bar-axis" aria-hidden="true">
+        <div className="stock-bar-scale">
+          {PERCENT_TICKS.map((tick) => (
+            <span key={tick} className={tick === 100 ? "is-last" : undefined} style={{ left: `${tick}%` }}>
+              {tick}<b>%</b>
+            </span>
+          ))}
+        </div>
+        <p>เปอร์เซ็นต์เทียบกับสินค้าที่คงเหลือมากที่สุดในหน่วยนี้</p>
+      </div>
     </section>
   );
 }
