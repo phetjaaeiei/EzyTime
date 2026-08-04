@@ -1003,3 +1003,15 @@ tbody tr:hover {
     border: 0;
   }
 }
+
+/* ===== Stock: donut ===== */
+.donut { position: relative; display: inline-grid; place-items: center; }
+.donut svg { display: block; }
+.donut-track { stroke: color-mix(in oklab, var(--ink) 10%, transparent); }
+.donut circle { transition: stroke-dashoffset 180ms ease, stroke-dasharray 180ms ease; }
+.donut-center {
+  position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.1;
+}
+.donut-center strong { font-size: 1.05rem; color: var(--ink); }
+.donut-center span { font-size: 0.75rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .donut circle { transition: none; } }
