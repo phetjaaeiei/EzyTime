@@ -1016,7 +1016,7 @@ tbody tr:hover {
 .donut-center span { font-size: 0.75rem; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .donut circle { transition: none; } }
 
-/* ===== Stock: overall inventory pie ===== */
+/* ===== Stock: overall inventory bars ===== */
 .stock-overview {
   display: grid;
   gap: 20px;
@@ -1034,22 +1034,18 @@ tbody tr:hover {
 .stock-daily-summary dd { margin: 0; color: var(--ink); font-weight: 780; font-variant-numeric: tabular-nums; }
 .stock-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 24px; }
 .stock-unit-overview { min-width: 0; border-top: 1px solid var(--border); padding-top: 16px; }
-.stock-unit-overview h3 { width: min(100%, 608px); margin: 0 auto 12px; color: var(--muted); font-size: 0.9rem; }
-.stock-unit-content {
-  display: grid;
-  grid-template-columns: 220px minmax(260px, 360px);
-  justify-content: center;
-  align-items: center;
-  gap: 28px;
-}
-.stock-pie { display: block; width: 100%; max-width: 220px; height: auto; overflow: visible; }
-.stock-pie-empty { fill: var(--surface); stroke: var(--border); stroke-width: 2; }
-.stock-pie-value { fill: white; font-size: 0.82rem; font-weight: 800; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: rgb(0 0 0 / 0.28); stroke-width: 2px; }
-.stock-overview-legend { display: grid; gap: 9px; min-width: 0; margin: 0; padding: 0; list-style: none; }
-.stock-overview-legend li { display: grid; grid-template-columns: 12px minmax(0, 1fr) max-content; align-items: center; gap: 8px; }
-.stock-overview-dot { width: 12px; height: 12px; border-radius: 3px; }
-.stock-overview-legend li > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
-.stock-overview-legend strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stock-unit-overview h3,
+.stock-bar-list { width: min(100%, 760px); margin-right: auto; margin-left: auto; }
+.stock-unit-overview h3 { margin-top: 0; margin-bottom: 16px; color: var(--muted); font-size: 0.9rem; }
+.stock-bar-list { display: grid; gap: 16px; padding: 0; list-style: none; }
+.stock-bar-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 7px; }
+.stock-bar-name { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 720; overflow-wrap: anywhere; }
+.stock-bar-name small { flex: 0 0 auto; border-radius: 999px; background: var(--danger-soft); color: var(--danger); padding: 2px 7px; font-size: 0.7rem; font-weight: 760; }
+.stock-bar-heading strong { flex: 0 0 auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stock-bar-track { height: 12px; overflow: hidden; border-radius: 4px; background: var(--primary-soft); }
+.stock-bar-fill { display: block; height: 100%; border-radius: inherit; background: var(--primary-strong); }
+.stock-bar-list .is-low .stock-bar-track { background: var(--danger-soft); }
+.stock-bar-list .is-low .stock-bar-fill { background: var(--danger); }
 
 /* ===== Stock: module switcher + cards ===== */
 .module-switcher { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border-radius: 10px; margin: 0 0 20px; }
@@ -1113,8 +1109,7 @@ tbody tr:hover {
   .stock-overview { padding: 16px; }
   .stock-overview-head { flex-direction: column; }
   .stock-daily-summary { justify-content: flex-start; }
-  .stock-unit-content { grid-template-columns: 1fr; justify-items: center; }
-  .stock-overview-legend { width: 100%; }
+  .stock-bar-list { gap: 14px; }
 }
 
 @media (max-width: 340px) {
