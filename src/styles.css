@@ -1170,18 +1170,25 @@ tbody tr:hover {
 }
 .admin-sidebar-account > span > strong { overflow: hidden; color: var(--ink); font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
 .admin-workspace { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; scrollbar-gutter: stable; }
-.employee-sidebar-note {
+.employee-sidebar-account {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
   gap: 9px;
   margin-top: auto;
   border-top: 1px solid var(--border);
-  color: var(--muted);
   padding: 14px 8px 2px;
-  font-size: 0.75rem;
-  line-height: 1.45;
 }
+.employee-sidebar-account > span { display: grid; min-width: 0; }
+.employee-sidebar-account small { color: var(--muted); font-size: 0.7rem; }
+.employee-sidebar-account strong { overflow: hidden; color: var(--ink); font-size: 0.82rem; text-overflow: ellipsis; white-space: nowrap; }
+.employee-account-actions { display: flex; gap: 4px; }
+.employee-account-actions .icon-button { width: 36px; height: 36px; }
+.employee-signout-button { color: var(--danger); }
+.employee-signout-button:hover:not(:disabled) { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+.employee-account-error { grid-column: 1 / -1; color: var(--danger); font-size: 0.72rem; line-height: 1.4; }
+.employee-name-form { padding: 0; }
+.employee-name-form .dialog-actions { margin-top: 2px; }
 .employee-auth-layout { grid-template-columns: minmax(0, 680px); }
 .employee-auth-card { min-height: 0; padding: clamp(20px, 4vw, 32px); }
 .employee-auth-card .primary-button { width: 100%; }

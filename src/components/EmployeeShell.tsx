@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Clock3, Info, Menu, PackageMinus, X } from "lucide-react";
-import { getEmployeeSession, onEmployeeAuthChange } from "../lib/store";
+import { Clock3, Loader2, LogOut, Menu, PackageMinus, Pencil, UserRound, X } from "lucide-react";
+import type { EmployeeSession } from "../types";
+import { getEmployeeSession, onEmployeeAuthChange, signOutCurrentUser } from "../lib/store";
 import { isSupabaseConfigured } from "../lib/supabase";
+import EmployeeNameDialog from "./EmployeeNameDialog";
 
 type EmployeeRoute = "clock" | "stock";
 
@@ -13,21 +15,24 @@ interface Props {
 
 export default function EmployeeShell({ route, onNavigate, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(() =>
-    isSupabaseConfigured ? undefined : true,
+  const [session, setSession] = useState<EmployeeSession | null | undefined>(() =>
+    isSupabaseConfigured ? undefined : { userId: "demo", nickname: "โหมดทดลอง" },
   );
+  const [editingName, setEditingName] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [accountError, setAccountError] = useState("");
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let mounted = true;
     getEmployeeSession()
-      .then((session) => {
-        if (mounted) setIsAuthenticated(Boolean(session));
+      .then((nextSession) => {
+        if (mounted) setSession(nextSession);
       })
       .catch(() => {
-        if (mounted) setIsAuthenticated(false);
+        if (mounted) setSession(null);
       });
-    const unsubscribe = onEmployeeAuthChange((session) => setIsAuthenticated(Boolean(session)));
+    const unsubscribe = onEmployeeAuthChange(setSession);
     return () => {
       mounted = false;
       unsubscribe();
@@ -50,8 +55,19 @@ export default function EmployeeShell({ route, onNavigate, children }: Props) {
 
   const currentLabel = route === "clock" ? "ลงเวลา" : "เบิกของ";
 
-  if (isAuthenticated !== true) {
+  if (!session) {
     return <div className="employee-login-shell">{children}</div>;
+  }
+
+  async function handleSignOut() {
+    setAccountError("");
+    setSigningOut(true);
+    try {
+      await signOutCurrentUser();
+    } catch (cause) {
+      setAccountError(cause instanceof Error ? cause.message : "ออกจากระบบไม่สำเร็จ");
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -92,10 +108,21 @@ export default function EmployeeShell({ route, onNavigate, children }: Props) {
           </button>
         </nav>
 
-        <div className="employee-sidebar-note">
-          <Info size={17} aria-hidden="true" />
-          <span>ใช้บัญชี Google เดียวกันได้ทั้งสองเมนู</span>
-        </div>
+        {isSupabaseConfigured ? (
+          <div className="employee-sidebar-account">
+            <UserRound size={18} aria-hidden="true" />
+            <span><small>เข้าสู่ระบบเป็น</small><strong>{session.nickname ?? "พนักงาน"}</strong></span>
+            <div className="employee-account-actions">
+              <button className="icon-button" type="button" onClick={() => setEditingName(true)} aria-label="แก้ไขชื่อ" title="แก้ไขชื่อ">
+                <Pencil size={17} />
+              </button>
+              <button className="icon-button employee-signout-button" type="button" onClick={() => void handleSignOut()} disabled={signingOut} aria-label="ออกจากระบบ" title="ออกจากระบบ">
+                {signingOut ? <Loader2 className="spin" size={17} /> : <LogOut size={17} />}
+              </button>
+            </div>
+            {accountError ? <p className="employee-account-error" role="alert">{accountError}</p> : null}
+          </div>
+        ) : null}
       </aside>
 
       {sidebarOpen ? <button className="admin-sidebar-backdrop" type="button" onClick={() => setSidebarOpen(false)} aria-label="ปิดเมนู" /> : null}
@@ -115,6 +142,16 @@ export default function EmployeeShell({ route, onNavigate, children }: Props) {
         </div>
         {children}
       </div>
+      {editingName ? (
+        <EmployeeNameDialog
+          nickname={session.nickname ?? ""}
+          onClose={() => setEditingName(false)}
+          onSaved={(nickname) => {
+            setSession({ ...session, nickname });
+            setEditingName(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Boxes, Loader2, LogIn, LogOut, PackageMinus } from "lucide-react";
+import { Boxes, Loader2, LogIn, PackageMinus } from "lucide-react";
 import type { EmployeeSession, StockItem, StockMovement } from "../types";
 import {
   getEmployeeSession,
   onEmployeeAuthChange,
   signInWithGoogle,
-  signOutCurrentUser,
 } from "../lib/store";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { listItems, listMovements } from "../lib/stock";
@@ -76,13 +75,6 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
         <div className="eyebrow-row"><span className="status-dot" />{demo ? "โหมดทดลอง" : "เบิกของ"}</div>
         <h1 id="emp-stock-heading">เบิกของเข้าครัว</h1>
         <p className="lead-copy">เลือกสินค้าแล้วกดเบิก ระบบจะบันทึกชื่อและเวลาให้อัตโนมัติ</p>
-        {!demo ? (
-          <div className="button-row">
-            <button className="field-link-button" type="button" onClick={() => signOutCurrentUser()}>
-              <LogOut size={15} /> ออกจากระบบ
-            </button>
-          </div>
-        ) : null}
       </div>
 
       <div className="form-panel">
