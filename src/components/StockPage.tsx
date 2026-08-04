@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Boxes, History, Loader2, LogIn, PackageMinus } from "lucide-react";
 import type { EmployeeSession, StockItem, StockMovement } from "../types";
 import {
@@ -67,6 +67,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   });
   const { items, movements } = data;
 
+  const itemGroups = useMemo(() => groupItemsByCategory(items), [items]);
   const todayMine = movements.filter((m) => new Date(m.created_at).toDateString() === new Date().toDateString());
 
   return (
@@ -89,21 +90,35 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
           {error ? <p className="form-error" role="alert">{error}</p> : null}
           {loading ? (
             <div className="skeleton-table">{Array.from({ length: 4 }).map((_, i) => <span key={i} />)}</div>
+          ) : itemGroups.length ? (
+            <div className="emp-stock-groups">
+              {itemGroups.map(([category, categoryItems], categoryIndex) => {
+                const headingId = `employee-stock-category-${categoryIndex}`;
+                return (
+                  <section className="emp-stock-category" key={category} aria-labelledby={headingId}>
+                    <div className="emp-stock-category-head">
+                      <h3 id={headingId}><span className="status-dot" />{category}</h3>
+                      <span>{categoryItems.length} รายการ</span>
+                    </div>
+                    <ul className="emp-stock-list">
+                      {categoryItems.map((item) => (
+                        <li key={item.id}>
+                          <div>
+                            <strong>{item.name}</strong>
+                            <span className="muted-copy">หน่วย: {item.unit}</span>
+                          </div>
+                          <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)}>
+                            <PackageMinus size={17} /> เบิก
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
           ) : (
-            <ul className="emp-stock-list">
-              {items.map((item) => (
-                <li key={item.id}>
-                  <div>
-                    <strong>{item.name}</strong>
-                    <span className="muted-copy">หน่วย: {item.unit}{item.category ? ` · ${item.category}` : ""}</span>
-                  </div>
-                  <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)}>
-                    <PackageMinus size={17} /> เบิก
-                  </button>
-                </li>
-              ))}
-              {!items.length ? <li className="muted-copy">ยังไม่มีสินค้าให้เบิก</li> : null}
-            </ul>
+            <p className="employee-stock-history-empty">ยังไม่มีสินค้าให้เบิก</p>
           )}
         </section>
 
@@ -143,4 +158,13 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
       ) : null}
     </section>
   );
+}
+
+function groupItemsByCategory(items: StockItem[]): [string, StockItem[]][] {
+  const groups = new Map<string, StockItem[]>();
+  for (const item of items) {
+    const category = item.category?.trim() || "ไม่ระบุหมวดหมู่";
+    groups.set(category, [...(groups.get(category) ?? []), item]);
+  }
+  return Array.from(groups.entries()).sort(([first], [second]) => first.localeCompare(second, "th-TH"));
 }
