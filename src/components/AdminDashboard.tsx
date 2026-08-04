@@ -5,11 +5,12 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
-  Clock3,
   Copy,
   Download,
+  LayoutDashboard,
   Loader2,
   LogOut,
+  Menu,
   Printer,
   QrCode,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   Timer,
   UserRoundCheck,
   UsersRound,
+  X,
 } from "lucide-react";
 import type { AuthSession, SummaryRow, TimeLog } from "../types";
 import StockDashboard from "./stock/StockDashboard";
@@ -77,33 +79,92 @@ type AdminModule = "attendance" | "stock";
 
 function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSignedOut: () => void }) {
   const [module, setModule] = useState<AdminModule>("attendance");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setSidebarOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
+
+  function selectModule(nextModule: AdminModule) {
+    setModule(nextModule);
+    setSidebarOpen(false);
+  }
+
+  async function handleSignOut() {
+    await signOutCurrentUser();
+    onSignedOut();
+  }
+
+  const currentLabel = module === "attendance" ? "Dashboard" : "สต๊อกสินค้า";
+
   return (
-    <div>
-      <div className="module-switcher" role="tablist" aria-label="เลือกโมดูล">
-        <button
-          role="tab"
-          aria-selected={module === "attendance"}
-          className={module === "attendance" ? "module-tab is-active" : "module-tab"}
-          type="button"
-          onClick={() => setModule("attendance")}
-        >
-          <Clock3 size={18} /> เวลาทำงาน
-        </button>
-        <button
-          role="tab"
-          aria-selected={module === "stock"}
-          className={module === "stock" ? "module-tab is-active" : "module-tab"}
-          type="button"
-          onClick={() => setModule("stock")}
-        >
-          <Boxes size={18} /> สต๊อกสินค้า
-        </button>
+    <div className="admin-shell">
+      <aside id="admin-sidebar" className={sidebarOpen ? "admin-sidebar is-open" : "admin-sidebar"}>
+        <div className="admin-sidebar-head">
+          <div>
+            <strong>Admin</strong>
+            <span>ระบบจัดการร้าน</span>
+          </div>
+          <button className="icon-button admin-sidebar-close" type="button" onClick={() => setSidebarOpen(false)} aria-label="ปิดเมนู">
+            <X size={18} />
+          </button>
+        </div>
+
+        <nav className="admin-sidebar-nav" aria-label="เมนูผู้ดูแลระบบ">
+          <span className="admin-sidebar-label">เมนูหลัก</span>
+          <button
+            className={module === "attendance" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+            type="button"
+            onClick={() => selectModule("attendance")}
+            aria-current={module === "attendance" ? "page" : undefined}
+          >
+            <LayoutDashboard size={19} />
+            <span><strong>Dashboard</strong><small>เวลาทำงานและการลงเวลา</small></span>
+          </button>
+          <button
+            className={module === "stock" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+            type="button"
+            onClick={() => selectModule("stock")}
+            aria-current={module === "stock" ? "page" : undefined}
+          >
+            <Boxes size={19} />
+            <span><strong>สต๊อกสินค้า</strong><small>คงเหลือ รับเข้า และเบิกออก</small></span>
+          </button>
+        </nav>
+
+        <div className="admin-sidebar-account">
+          <ShieldCheck size={18} aria-hidden="true" />
+          <span><small>เข้าสู่ระบบเป็น</small><strong>{session.isDemo ? "โหมดทดลอง" : session.email}</strong></span>
+          {isSupabaseConfigured ? (
+            <button className="icon-button" type="button" onClick={handleSignOut} aria-label="ออกจากระบบ">
+              <LogOut size={18} />
+            </button>
+          ) : null}
+        </div>
+      </aside>
+
+      {sidebarOpen ? <button className="admin-sidebar-backdrop" type="button" onClick={() => setSidebarOpen(false)} aria-label="ปิดเมนู" /> : null}
+
+      <div className="admin-workspace">
+        <div className="admin-mobile-nav">
+          <button
+            className="icon-text-button"
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-controls="admin-sidebar"
+            aria-expanded={sidebarOpen}
+          >
+            <Menu size={18} /> เมนู
+          </button>
+          <strong>{currentLabel}</strong>
+        </div>
+        {module === "attendance" ? <Dashboard /> : <StockDashboard />}
       </div>
-      {module === "attendance" ? (
-        <Dashboard session={session} onSignedOut={onSignedOut} />
-      ) : (
-        <StockDashboard />
-      )}
     </div>
   );
 }
@@ -178,7 +239,7 @@ function LoginPanel({ onSignedIn }: { onSignedIn: (session: AuthSession) => void
   );
 }
 
-function Dashboard({ session, onSignedOut }: { session: AuthSession; onSignedOut: () => void }) {
+function Dashboard() {
   const [selectedDate, setSelectedDate] = useState(getDefaultDate);
   const [logs, setLogs] = useState<TimeLog[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
@@ -235,18 +296,13 @@ function Dashboard({ session, onSignedOut }: { session: AuthSession; onSignedOut
     }
   }
 
-  async function handleSignOut() {
-    await signOutCurrentUser();
-    onSignedOut();
-  }
-
   return (
     <section className="admin-layout" aria-labelledby="admin-heading">
       <div className="admin-heading-row">
         <div>
           <div className="eyebrow-row">
             <span className="status-dot" />
-            {session.isDemo ? "โหมดทดลองบนเครื่อง" : session.email}
+            Dashboard
           </div>
           <h1 id="admin-heading">สรุปเวลารายวัน</h1>
           <p className="muted-copy">{formatThaiDate(selectedDate)}</p>
@@ -270,11 +326,6 @@ function Dashboard({ session, onSignedOut }: { session: AuthSession; onSignedOut
             {loadState === "loading" ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
           </button>
-          {isSupabaseConfigured ? (
-            <button className="icon-button" type="button" onClick={handleSignOut} aria-label="ออกจากระบบ">
-              <LogOut size={18} />
-            </button>
-          ) : null}
         </div>
       </div>
 

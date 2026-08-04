@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock3, LayoutDashboard } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import AdminDashboard from "./components/AdminDashboard";
 import ClockPage from "./components/ClockPage";
 import StockPage from "./components/StockPage";
@@ -61,18 +61,7 @@ export default function App() {
             <button className={route === "clock" ? "route-tab is-active" : "route-tab"} type="button" onClick={() => navigate("/clock")}>ลงเวลา</button>
             <button className={route === "stock" ? "route-tab is-active" : "route-tab"} type="button" onClick={() => navigate("/stock")}>เบิกของ</button>
           </nav>
-        ) : (
-          <nav className="route-tabs" aria-label="หน้าในระบบ">
-            <button
-              className={route === "admin" ? "route-tab is-active" : "route-tab"}
-              type="button"
-              onClick={() => navigate("/")}
-            >
-              <LayoutDashboard size={18} />
-              Admin
-            </button>
-          </nav>
-        )}
+        ) : null}
       </header>
 
       <main id="main-content" className="page-frame">
