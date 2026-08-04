@@ -1366,6 +1366,8 @@ tbody tr:hover {
 /* ===== Stock: archived item ===== */
 .stock-card.is-archived { opacity: 0.6; }
 .stock-chip.muted { background: color-mix(in oklab, var(--ink) 10%, transparent); color: var(--ink); }
+.stock-on-hand-field { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px; }
+.field-hint { color: var(--muted); font-size: 0.75rem; font-weight: 520; line-height: 1.45; }
 
 @media (max-width: 1200px) {
   .stock-overview-head {

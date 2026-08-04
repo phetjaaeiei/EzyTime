@@ -1,20 +1,23 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Loader2, Save, X } from "lucide-react";
 import type { NewStockItem, StockItem } from "../../types";
-import { archiveItem, createItem, updateItem } from "../../lib/stock";
+import { archiveItem, createItem, recordMovement, updateItem } from "../../lib/stock";
+import { formatQuantity } from "../../lib/stock.calc";
 
 interface Props {
   item?: StockItem;
+  currentOnHand?: number;
   categorySuggestions: string[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function ItemFormDialog({ item, categorySuggestions, onClose, onSaved }: Props) {
+export default function ItemFormDialog({ item, currentOnHand, categorySuggestions, onClose, onSaved }: Props) {
   const [name, setName] = useState(item?.name ?? "");
   const [unit, setUnit] = useState(item?.unit ?? "กก.");
   const [category, setCategory] = useState(item?.category ?? "");
   const [threshold, setThreshold] = useState(item?.low_stock_threshold?.toString() ?? "");
+  const [onHand, setOnHand] = useState(currentOnHand?.toString() ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -37,11 +40,30 @@ export default function ItemFormDialog({ item, categorySuggestions, onClose, onS
       setError("จุดแจ้งเตือนต้องเป็นตัวเลขที่ไม่ติดลบ");
       return;
     }
+    const desiredOnHand = item ? Number(onHand) : null;
+    if (item && (desiredOnHand === null || !Number.isFinite(desiredOnHand) || desiredOnHand < 0)) {
+      setError("จำนวนคงเหลือต้องเป็นตัวเลขที่ไม่ติดลบ");
+      return;
+    }
     setError("");
     setSaving(true);
     try {
-      if (item) await updateItem(item.id, payload);
-      else await createItem(payload);
+      if (item) {
+        await updateItem(item.id, payload);
+        const current = currentOnHand ?? 0;
+        const target = desiredOnHand ?? current;
+        const difference = target - current;
+        if (Math.abs(difference) > 1e-9) {
+          await recordMovement({
+            item_id: item.id,
+            type: difference > 0 ? "in" : "out",
+            quantity: Math.abs(difference),
+            note: `ปรับยอดคงเหลือจาก ${formatQuantity(current)} เป็น ${formatQuantity(target)}`,
+          });
+        }
+      } else {
+        await createItem(payload);
+      }
       onSaved();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "บันทึกไม่สำเร็จ");
@@ -75,6 +97,14 @@ export default function ItemFormDialog({ item, categorySuggestions, onClose, onS
           <input list="stock-cats" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="เช่น เนื้อ / ผัก" />
           <datalist id="stock-cats">{categorySuggestions.map((c) => <option key={c} value={c} />)}</datalist>
         </label>
+        {item ? (
+          <label className="field stock-on-hand-field"><span>จำนวนคงเหลือ ({unit.trim() || item.unit})</span>
+            <input type="number" min="0" step="any" value={onHand} onChange={(e) => setOnHand(e.target.value)} required />
+            <small className="field-hint">
+              ปัจจุบัน {formatQuantity(currentOnHand ?? 0)} {item.unit} ระบบจะบันทึกส่วนต่างไว้ในประวัติ
+            </small>
+          </label>
+        ) : null}
         <label className="field"><span>แจ้งเตือนเมื่อเหลือน้อยกว่า (ไม่บังคับ)</span>
           <input type="number" min="0" step="any" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="เช่น 5" />
         </label>
