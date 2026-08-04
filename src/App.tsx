@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Clock3 } from "lucide-react";
 import AdminDashboard from "./components/AdminDashboard";
 import ClockPage from "./components/ClockPage";
+import EmployeeShell from "./components/EmployeeShell";
 import StockPage from "./components/StockPage";
 
 type Route = "admin" | "clock" | "stock";
@@ -56,16 +57,16 @@ export default function App() {
           </button>
         )}
 
-        {isEmployeeRoute ? (
-          <nav className="route-tabs" aria-label="เมนูพนักงาน">
-            <button className={route === "clock" ? "route-tab is-active" : "route-tab"} type="button" onClick={() => navigate("/clock")}>ลงเวลา</button>
-            <button className={route === "stock" ? "route-tab is-active" : "route-tab"} type="button" onClick={() => navigate("/stock")}>เบิกของ</button>
-          </nav>
-        ) : null}
       </header>
 
       <main id="main-content" className="page-frame">
-        {route === "clock" ? <ClockPage /> : route === "stock" ? <StockPage /> : <AdminDashboard />}
+        {isEmployeeRoute ? (
+          <EmployeeShell route={route} onNavigate={navigate}>
+            {route === "clock" ? <ClockPage /> : <StockPage />}
+          </EmployeeShell>
+        ) : (
+          <AdminDashboard />
+        )}
       </main>
     </div>
   );

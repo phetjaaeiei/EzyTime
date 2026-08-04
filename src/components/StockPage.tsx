@@ -41,8 +41,8 @@ function SignInPanel() {
     try { await signInWithGoogle(); } catch (c) { setError(c instanceof Error ? c.message : "เข้าสู่ระบบไม่สำเร็จ"); setSubmitting(false); }
   }
   return (
-    <section className="clock-layout">
-      <div className="form-panel">
+    <section className="clock-layout employee-auth-layout">
+      <div className="form-panel employee-auth-card">
         <span className="panel-icon" aria-hidden="true"><Boxes size={24} /></span>
         <h1>เข้าสู่ระบบเพื่อเบิกของ</h1>
         <p className="muted-copy">ใช้บัญชี Google เดียวกับที่ลงเวลา</p>

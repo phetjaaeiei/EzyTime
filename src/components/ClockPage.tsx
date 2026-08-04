@@ -90,8 +90,8 @@ function GoogleSignInPanel() {
   }
 
   return (
-    <section className="clock-layout" aria-labelledby="clock-signin-heading">
-      <div className="form-panel">
+    <section className="clock-layout employee-auth-layout" aria-labelledby="clock-signin-heading">
+      <div className="form-panel employee-auth-card">
         <span className="panel-icon" aria-hidden="true">
           <UserRound size={24} />
         </span>
