@@ -64,6 +64,7 @@ export interface Database {
           category: string | null;
           low_stock_threshold: number | null;
           is_active: boolean;
+          updated_at: string;
         }>;
       };
       stock_movements: {

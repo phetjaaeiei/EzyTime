@@ -91,7 +91,7 @@ create table if not exists public.stock_items (
 
 create table if not exists public.stock_movements (
   id uuid primary key default gen_random_uuid(),
-  item_id uuid not null references public.stock_items(id) on delete cascade,
+  item_id uuid not null references public.stock_items(id) on delete restrict,
   type text not null check (type in ('in', 'out', 'waste')),
   quantity numeric not null check (quantity > 0),
   note text check (char_length(note) <= 300),
@@ -102,6 +102,7 @@ create table if not exists public.stock_movements (
 
 create index if not exists stock_movements_item_idx on public.stock_movements (item_id);
 create index if not exists stock_movements_created_at_idx on public.stock_movements (created_at);
+create index if not exists stock_movements_user_idx on public.stock_movements (user_id);
 
 alter table public.stock_items enable row level security;
 alter table public.stock_movements enable row level security;
