@@ -70,5 +70,79 @@ using (
   )
 );
 
+-- ===== Stock management module =====
+
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.admin_users where user_id = auth.uid());
+$$;
+
+create table if not exists public.stock_items (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(trim(name)) between 1 and 100),
+  unit text not null check (char_length(trim(unit)) between 1 and 20),
+  category text,
+  low_stock_threshold numeric check (low_stock_threshold >= 0),
+  is_active boolean not null default true,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.stock_movements (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid not null references public.stock_items(id) on delete cascade,
+  type text not null check (type in ('in', 'out', 'waste')),
+  quantity numeric not null check (quantity > 0),
+  note text check (char_length(note) <= 300),
+  user_id uuid references auth.users(id),
+  actor_name text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists stock_movements_item_idx on public.stock_movements (item_id);
+create index if not exists stock_movements_created_at_idx on public.stock_movements (created_at);
+
+alter table public.stock_items enable row level security;
+alter table public.stock_movements enable row level security;
+
+grant select on public.stock_items to authenticated;
+grant insert, update, delete on public.stock_items to authenticated;
+grant select, insert, update, delete on public.stock_movements to authenticated;
+
+-- stock_items: everyone signed-in can read; only admins write.
+drop policy if exists "Authenticated can read stock items" on public.stock_items;
+create policy "Authenticated can read stock items"
+on public.stock_items for select to authenticated using (true);
+
+drop policy if exists "Admins manage stock items" on public.stock_items;
+create policy "Admins manage stock items"
+on public.stock_items for all to authenticated
+using (public.is_admin()) with check (public.is_admin());
+
+-- stock_movements: employees insert their own out/waste; admins insert anything.
+drop policy if exists "Users record their own withdrawals" on public.stock_movements;
+create policy "Users record their own withdrawals"
+on public.stock_movements for insert to authenticated
+with check (
+  user_id = auth.uid()
+  and (type in ('out', 'waste') or public.is_admin())
+);
+
+drop policy if exists "Read own movements or admin reads all" on public.stock_movements;
+create policy "Read own movements or admin reads all"
+on public.stock_movements for select to authenticated
+using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "Admins correct movements" on public.stock_movements;
+create policy "Admins correct movements"
+on public.stock_movements for update to authenticated
+using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "Admins delete movements" on public.stock_movements;
+create policy "Admins delete movements"
+on public.stock_movements for delete to authenticated
+using (public.is_admin());
+
 -- After creating the admin user in Supabase Auth, paste that user's UUID here:
 -- insert into public.admin_users (user_id) values ('00000000-0000-0000-0000-000000000000');

@@ -46,3 +46,67 @@ export interface EmployeeSession {
   userId: string;
   nickname: string | null;
 }
+
+// ===== Stock module =====
+
+export type MovementType = "in" | "out" | "waste";
+
+export interface StockItem {
+  id: string;
+  name: string;
+  unit: string;
+  category: string | null;
+  low_stock_threshold: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NewStockItem {
+  name: string;
+  unit: string;
+  category: string | null;
+  low_stock_threshold: number | null;
+}
+
+export interface StockItemPatch {
+  name?: string;
+  unit?: string;
+  category?: string | null;
+  low_stock_threshold?: number | null;
+  is_active?: boolean;
+}
+
+export interface StockMovement {
+  id: string;
+  item_id: string;
+  type: MovementType;
+  quantity: number;
+  note: string | null;
+  user_id: string | null;
+  actor_name: string | null;
+  created_at: string;
+}
+
+export interface NewMovement {
+  item_id: string;
+  type: MovementType;
+  quantity: number;
+  note?: string | null;
+}
+
+export interface ItemBalance {
+  item: StockItem;
+  received: number;
+  withdrawn: number;
+  waste: number;
+  onHand: number;
+  isLow: boolean;
+}
+
+export interface DailyStockStats {
+  received: number;
+  withdrawn: number;
+  waste: number;
+  movementCount: number;
+}
