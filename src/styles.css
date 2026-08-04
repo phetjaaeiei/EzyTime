@@ -1022,14 +1022,14 @@ tbody tr:hover {
 .module-tab.is-active { background: var(--bg); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
 .stock-group { margin-top: 22px; }
 .stock-group-title { font-size: 1rem; color: var(--muted); margin: 0 0 12px; }
-.stock-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.stock-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .stock-card { background: var(--bg); border: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); border-radius: 10px; padding: 16px; }
 .stock-card.is-low { border-color: var(--danger); }
 .stock-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
 .stock-card-head h3 { margin: 0; font-size: 1.05rem; }
 .stock-chip { display: inline-block; margin-top: 4px; font-size: 0.75rem; color: var(--muted); background: var(--surface); padding: 2px 8px; border-radius: 999px; }
 .low-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--danger); }
-.stock-card-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.stock-card-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
 .stock-legend { min-width: 0; list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.85rem; }
 .stock-legend li { display: grid; grid-template-columns: 10px minmax(max-content, 1fr) max-content; align-items: center; gap: 6px; }
 .stock-legend .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
@@ -1063,6 +1063,18 @@ tbody tr:hover {
 /* ===== Stock: archived item ===== */
 .stock-card.is-archived { opacity: 0.6; }
 .stock-chip.muted { background: color-mix(in oklab, var(--ink) 10%, transparent); color: var(--ink); }
+
+@media (max-width: 1200px) {
+  .stock-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .stock-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 @media (max-width: 340px) {
   .stock-card-body {

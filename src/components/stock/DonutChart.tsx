@@ -10,8 +10,8 @@ interface DonutChartProps {
 
 export default function DonutChart({
   slices,
-  size = 112,
-  thickness = 14,
+  size = 104,
+  thickness = 13,
   centerLabel,
   centerSub,
 }: DonutChartProps) {
