@@ -1047,3 +1047,11 @@ tbody tr:hover {
 .dialog-head h2 { margin: 0; font-size: 1.1rem; }
 .stock-card-actions { display: flex; gap: 8px; margin-top: 12px; }
 .stock-card-actions button { flex: 1; }
+
+/* ===== Stock: employee list ===== */
+.emp-stock-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.emp-stock-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px; border: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); border-radius: 8px; }
+.emp-stock-list li > div { display: grid; }
+.emp-today { margin-top: 20px; }
+.emp-today h2 { font-size: 1rem; margin: 0 0 8px; }
+.emp-today ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.9rem; color: var(--muted); }

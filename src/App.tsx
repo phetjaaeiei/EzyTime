@@ -2,16 +2,20 @@ import { useEffect, useState } from "react";
 import { Clock3, LayoutDashboard } from "lucide-react";
 import AdminDashboard from "./components/AdminDashboard";
 import ClockPage from "./components/ClockPage";
+import StockPage from "./components/StockPage";
 
-type Route = "admin" | "clock";
+type Route = "admin" | "clock" | "stock";
 
 function getRouteFromPath(): Route {
-  return window.location.pathname.startsWith("/clock") ? "clock" : "admin";
+  const path = window.location.pathname;
+  if (path.startsWith("/clock")) return "clock";
+  if (path.startsWith("/stock")) return "stock";
+  return "admin";
 }
 
 export default function App() {
   const [route, setRoute] = useState<Route>(getRouteFromPath);
-  const isClockRoute = route === "clock";
+  const isEmployeeRoute = route === "clock" || route === "stock";
 
   useEffect(() => {
     const handlePopState = () => setRoute(getRouteFromPath());
@@ -30,7 +34,7 @@ export default function App() {
         ข้ามไปเนื้อหา
       </a>
       <header className="topbar">
-        {isClockRoute ? (
+        {isEmployeeRoute ? (
           <div className="brand-button" aria-label="EzyTime QR attendance">
             <span className="brand-mark" aria-hidden="true">
               <Clock3 size={20} strokeWidth={2.4} />
@@ -52,7 +56,12 @@ export default function App() {
           </button>
         )}
 
-        {!isClockRoute ? (
+        {isEmployeeRoute ? (
+          <nav className="route-tabs" aria-label="เมนูพนักงาน">
+            <button className={route === "clock" ? "route-tab is-active" : "route-tab"} type="button" onClick={() => navigate("/clock")}>ลงเวลา</button>
+            <button className={route === "stock" ? "route-tab is-active" : "route-tab"} type="button" onClick={() => navigate("/stock")}>เบิกของ</button>
+          </nav>
+        ) : (
           <nav className="route-tabs" aria-label="หน้าในระบบ">
             <button
               className={route === "admin" ? "route-tab is-active" : "route-tab"}
@@ -63,11 +72,11 @@ export default function App() {
               Admin
             </button>
           </nav>
-        ) : null}
+        )}
       </header>
 
       <main id="main-content" className="page-frame">
-        {route === "clock" ? <ClockPage /> : <AdminDashboard />}
+        {route === "clock" ? <ClockPage /> : route === "stock" ? <StockPage /> : <AdminDashboard />}
       </main>
     </div>
   );
