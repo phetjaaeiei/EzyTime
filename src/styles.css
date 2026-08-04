@@ -1137,6 +1137,9 @@ tbody tr:hover {
 .stock-card.is-low { border-color: var(--danger); }
 .stock-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
 .stock-card-head h3 { margin: 0; font-size: 1.05rem; }
+.stock-card-head-actions { display: flex; flex: 0 0 auto; align-items: flex-start; gap: 6px; }
+.stock-delete-button { width: 40px; height: 40px; margin: -8px -8px 0 0; color: var(--danger); }
+.stock-delete-button:hover:not(:disabled) { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
 .stock-chip { display: inline-block; margin-top: 4px; font-size: 0.75rem; color: var(--muted); background: var(--surface); padding: 2px 8px; border-radius: 999px; }
 .low-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--danger); }
 .stock-card-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
@@ -1159,6 +1162,15 @@ tbody tr:hover {
 .dialog-panel { background: var(--bg); border-radius: 12px; padding: 20px; width: min(420px, 100%); max-height: 90vh; overflow: auto; }
 .dialog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .dialog-head h2 { margin: 0; font-size: 1.1rem; }
+.delete-item-confirmation { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: start; gap: 12px; padding: 8px 0 4px; }
+.delete-item-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--danger-soft); color: var(--danger); }
+.delete-item-confirmation strong { display: block; color: var(--ink); line-height: 1.45; }
+.delete-item-confirmation p { margin: 5px 0 0; color: var(--muted); font-size: 0.875rem; line-height: 1.55; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.dialog-actions > button { min-width: 120px; }
+.danger-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid var(--danger); border-radius: 8px; background: var(--danger); color: white; padding: 9px 16px; font: inherit; font-weight: 760; cursor: pointer; }
+.danger-button:hover:not(:disabled) { background: color-mix(in oklab, var(--danger) 88%, black); }
+.danger-button:disabled { cursor: not-allowed; opacity: 0.58; }
 .stock-card-actions { display: flex; gap: 8px; margin-top: 12px; }
 .stock-card-actions button { flex: 1; }
 
@@ -1210,6 +1222,8 @@ tbody tr:hover {
   .stock-card-grid {
     grid-template-columns: 1fr;
   }
+
+  .dialog-actions > button { flex: 1; min-width: 0; }
 
   .stock-overview { padding: 16px; }
   .stock-overview-head { flex-direction: column; }

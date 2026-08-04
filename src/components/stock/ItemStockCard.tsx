@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import type { ItemBalance } from "../../types";
 import { formatQuantity } from "../../lib/stock.calc";
 import DonutChart from "./DonutChart";
@@ -12,9 +12,10 @@ interface Props {
   onEdit?: () => void;
   onRecord?: () => void;
   onRestore?: () => void;
+  onDelete?: () => void;
 }
 
-export default function ItemStockCard({ balance, onEdit, onRecord, onRestore }: Props) {
+export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, onDelete }: Props) {
   const { item, received, withdrawn, waste, onHand, isLow } = balance;
   const fmt = (value: number) => `${formatQuantity(value)} ${item.unit}`;
   const archived = !item.is_active;
@@ -28,11 +29,24 @@ export default function ItemStockCard({ balance, onEdit, onRecord, onRestore }: 
           {item.category ? <span className="stock-chip">{item.category}</span> : null}
           {archived ? <span className="stock-chip muted">ปิดใช้งาน</span> : null}
         </div>
-        {isLow && !archived ? (
-          <span className="low-badge" title="ของใกล้หมด">
-            <AlertTriangle size={14} /> ใกล้หมด
-          </span>
-        ) : null}
+        <div className="stock-card-head-actions">
+          {isLow && !archived ? (
+            <span className="low-badge" title="ของใกล้หมด">
+              <AlertTriangle size={14} /> ใกล้หมด
+            </span>
+          ) : null}
+          {onDelete ? (
+            <button
+              className="icon-button stock-delete-button"
+              type="button"
+              onClick={onDelete}
+              aria-label={`ลบสินค้า ${item.name}`}
+              title="ลบสินค้า"
+            >
+              <Trash2 size={18} />
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <div className="stock-card-body">

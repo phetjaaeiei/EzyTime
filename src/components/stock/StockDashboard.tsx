@@ -16,6 +16,7 @@ import { useAsyncData } from "../../lib/useAsyncData";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
 import ItemStockCard from "./ItemStockCard";
 import ItemFormDialog from "./ItemFormDialog";
+import DeleteItemDialog from "./DeleteItemDialog";
 import MovementDialog from "./MovementDialog";
 import StockOverviewChart from "./StockOverviewChart";
 
@@ -23,6 +24,7 @@ export default function StockDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => formatDateInput(new Date()));
   const [editing, setEditing] = useState<StockItem | null | "new">(null);
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<StockItem | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
   const loadStock = useCallback(async () => {
@@ -118,6 +120,7 @@ export default function StockDashboard() {
                     balance={balance}
                     onEdit={() => setEditing(balance.item)}
                     onRecord={() => setMovingItem(balance.item)}
+                    onDelete={() => setDeletingItem(balance.item)}
                   />
                 ) : (
                   <ItemStockCard
@@ -154,6 +157,13 @@ export default function StockDashboard() {
           allowedTypes={["in", "out", "waste"]}
           onClose={() => setMovingItem(null)}
           onSaved={() => { setMovingItem(null); void reload(); }}
+        />
+      ) : null}
+      {deletingItem ? (
+        <DeleteItemDialog
+          item={deletingItem}
+          onClose={() => setDeletingItem(null)}
+          onDeleted={() => { setDeletingItem(null); void reload(); }}
         />
       ) : null}
     </section>
