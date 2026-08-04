@@ -212,10 +212,13 @@ export async function listMovements(
   return [...moves].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 }
 
-export async function listStockOnHand(): Promise<Record<string, number>> {
+export async function listStockOnHand(): Promise<Record<string, number> | null> {
   if (supabase) {
     const { data, error } = await supabase.rpc("get_stock_item_balances");
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "PGRST202" || error.message.includes("get_stock_item_balances")) return null;
+      throw new Error(error.message);
+    }
     return Object.fromEntries(
       ((data ?? []) as Array<{ item_id: string; on_hand: number }>).map((row) => [row.item_id, Number(row.on_hand)]),
     );

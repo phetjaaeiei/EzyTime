@@ -64,7 +64,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   const { data, loading, error, reload } = useAsyncData(loadStock, {
     items: [] as StockItem[],
     movements: [] as StockMovement[],
-    onHandByItem: {} as Record<string, number>,
+    onHandByItem: null as Record<string, number> | null,
   });
   const { items, movements, onHandByItem } = data;
 
@@ -84,7 +84,11 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
           <div className="employee-stock-section-heading">
             <div>
               <h2 id="employee-stock-catalog-heading">เลือกสินค้า</h2>
-              <p>สินค้าที่พร้อมให้เบิก {items.filter((item) => (onHandByItem[item.id] ?? 0) > 0).length} รายการ</p>
+              <p>
+                สินค้าที่พร้อมให้เบิก {onHandByItem
+                  ? items.filter((item) => (onHandByItem[item.id] ?? 0) > 0).length
+                  : items.length} รายการ
+              </p>
             </div>
             <span className="employee-stock-section-icon" aria-hidden="true"><Boxes size={20} /></span>
           </div>
@@ -103,14 +107,18 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
                     </div>
                     <ul className="emp-stock-list">
                       {categoryItems.map((item) => {
-                        const onHand = onHandByItem[item.id] ?? 0;
-                        const isOutOfStock = onHand <= 0;
+                        const onHand = onHandByItem?.[item.id];
+                        const isOutOfStock = onHand !== undefined && onHand <= 0;
                         return (
                         <li key={item.id} className={isOutOfStock ? "is-out-of-stock" : undefined}>
                           <div>
                             <strong>{item.name}</strong>
                             <span className={isOutOfStock ? "stock-status-out" : "muted-copy"}>
-                              {isOutOfStock ? "หมดแล้ว" : `คงเหลือ ${formatQuantity(onHand)} ${item.unit}`}
+                              {isOutOfStock
+                                ? "หมดแล้ว"
+                                : onHand !== undefined
+                                  ? `คงเหลือ ${formatQuantity(onHand)} ${item.unit}`
+                                  : `หน่วย: ${item.unit}`}
                             </span>
                           </div>
                           <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)} disabled={isOutOfStock}>
@@ -159,7 +167,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
         <MovementDialog
           item={movingItem}
           allowedTypes={["out", "waste"]}
-          availableQuantity={onHandByItem[movingItem.id] ?? 0}
+          availableQuantity={onHandByItem?.[movingItem.id]}
           onClose={() => setMovingItem(null)}
           onSaved={() => { setMovingItem(null); void reload(); }}
         />
