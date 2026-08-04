@@ -1368,6 +1368,8 @@ tbody tr:hover {
 .stock-chip.muted { background: color-mix(in oklab, var(--ink) 10%, transparent); color: var(--ink); }
 .stock-on-hand-field { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 12px; }
 .field-hint { color: var(--muted); font-size: 0.75rem; font-weight: 520; line-height: 1.45; }
+.stock-clear-history-button { color: var(--danger); }
+.stock-clear-history-button:hover:not(:disabled) { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
 
 @media (max-width: 1200px) {
   .stock-overview-head {

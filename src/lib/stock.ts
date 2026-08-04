@@ -1,4 +1,5 @@
 import type {
+  ItemBalance,
   NewMovement,
   NewStockItem,
   StockItem,
@@ -10,6 +11,8 @@ import { supabase } from "./supabase";
 
 const ITEMS_KEY = "ezytime.stock.items.v1";
 const MOVES_KEY = "ezytime.stock.moves.v1";
+const OPENING_BALANCE_NOTE = "__ezytime_stock_opening_balance__";
+const OPENING_BALANCE_DATE = "2000-01-01T00:00:00.000Z";
 
 // ---------- demo seed ----------
 function nowIso(): string {
@@ -244,4 +247,48 @@ export async function recordMovement(input: NewMovement): Promise<StockMovement>
   };
   writeLocal(MOVES_KEY, [...readLocal(MOVES_KEY, demoMovements), movement]);
   return movement;
+}
+
+export function isOpeningBalanceMovement(movement: StockMovement): boolean {
+  return movement.note === OPENING_BALANCE_NOTE;
+}
+
+export async function clearMovementHistory(balances: ItemBalance[]): Promise<void> {
+  if (balances.some((balance) => balance.onHand < 0)) {
+    throw new Error("พบสินค้าที่มียอดติดลบ กรุณาปรับยอดคงเหลือก่อนเคลียร์ประวัติ");
+  }
+
+  const actorName = await getStockActorName();
+  const userId = await currentUserId();
+  const openingBalances = balances
+    .filter((balance) => balance.onHand > 0)
+    .map((balance) => ({
+      item_id: balance.item.id,
+      type: "in" as const,
+      quantity: balance.onHand,
+      note: OPENING_BALANCE_NOTE,
+      user_id: userId,
+      actor_name: actorName,
+      created_at: OPENING_BALANCE_DATE,
+    }));
+
+  if (supabase) {
+    const { error: deleteError } = await supabase
+      .from("stock_movements")
+      .delete()
+      .not("id", "is", null);
+    if (deleteError) throw new Error(deleteError.message);
+
+    if (openingBalances.length) {
+      const { error: insertError } = await supabase.from("stock_movements").insert(openingBalances);
+      if (insertError) throw new Error(insertError.message);
+    }
+    return;
+  }
+
+  const localOpeningBalances: StockMovement[] = openingBalances.map((movement) => ({
+    ...movement,
+    id: crypto.randomUUID(),
+  }));
+  writeLocal(MOVES_KEY, localOpeningBalances);
 }

@@ -8,9 +8,10 @@ import {
   PackageSearch,
   Plus,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import type { ItemBalance, StockItem, StockMovement } from "../../types";
-import { listItems, listMovements, updateItem } from "../../lib/stock";
+import { isOpeningBalanceMovement, listItems, listMovements, updateItem } from "../../lib/stock";
 import { computeDailyStats, computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
 import { useAsyncData } from "../../lib/useAsyncData";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
@@ -19,12 +20,14 @@ import ItemFormDialog from "./ItemFormDialog";
 import DeleteItemDialog from "./DeleteItemDialog";
 import MovementDialog from "./MovementDialog";
 import StockOverviewChart from "./StockOverviewChart";
+import ClearHistoryDialog from "./ClearHistoryDialog";
 
 export default function StockDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => formatDateInput(new Date()));
   const [editing, setEditing] = useState<StockItem | null | "new">(null);
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<StockItem | null>(null);
+  const [clearingHistory, setClearingHistory] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
   const loadStock = useCallback(async () => {
@@ -46,6 +49,10 @@ export default function StockDashboard() {
   const archivedCount = balances.length - activeBalances.length;
   const daily = useMemo(() => computeDailyStats(movements, selectedDate), [movements, selectedDate]);
   const lowItems = useMemo(() => findLowStockItems(activeBalances), [activeBalances]);
+  const visibleMovementCount = useMemo(
+    () => movements.filter((movement) => !isOpeningBalanceMovement(movement)).length,
+    [movements],
+  );
   const grouped = useMemo(() => groupByCategory(visibleBalances), [visibleBalances]);
   const categories = useMemo(
     () => Array.from(new Set(items.map((i) => i.category).filter((c): c is string => !!c))),
@@ -141,7 +148,7 @@ export default function StockDashboard() {
         </div>
       )}
 
-      <RecentMovements movements={movements} items={items} />
+      <RecentMovements movements={movements} items={items} onClear={() => setClearingHistory(true)} />
 
       {editing ? (
         <ItemFormDialog
@@ -167,19 +174,30 @@ export default function StockDashboard() {
           onDeleted={() => { setDeletingItem(null); void reload(); }}
         />
       ) : null}
+      {clearingHistory ? (
+        <ClearHistoryDialog
+          balances={balances}
+          historyCount={visibleMovementCount}
+          onClose={() => setClearingHistory(false)}
+          onCleared={() => { setClearingHistory(false); void reload(); }}
+        />
+      ) : null}
     </section>
   );
 }
 
-function RecentMovements({ movements, items }: { movements: StockMovement[]; items: StockItem[] }) {
+function RecentMovements({ movements, items, onClear }: { movements: StockMovement[]; items: StockItem[]; onClear: () => void }) {
   const nameById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
-  const recent = movements.slice(0, 15);
+  const recent = movements.filter((movement) => !isOpeningBalanceMovement(movement)).slice(0, 15);
   const typeLabel: Record<StockMovement["type"], string> = { in: "รับเข้า", out: "เบิกออก", waste: "ของเสีย" };
   if (!recent.length) return null;
   return (
     <section className="activity-panel" aria-labelledby="stock-activity">
       <div className="section-heading-row">
         <div><h2 id="stock-activity">การเคลื่อนไหวล่าสุด</h2><p className="muted-copy">ใครเบิก/รับ อะไร เมื่อไหร่</p></div>
+        <button className="icon-text-button quiet stock-clear-history-button" type="button" onClick={onClear}>
+          <Trash2 size={17} /> เคลียร์ประวัติ
+        </button>
       </div>
       <ol className="activity-list">
         {recent.map((move) => {
