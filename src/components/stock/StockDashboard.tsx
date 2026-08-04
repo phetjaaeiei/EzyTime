@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Loader2,
   PackageSearch,
+  Plus,
   RefreshCw,
   Trash2,
 } from "lucide-react";
@@ -14,6 +15,8 @@ import { listItems, listMovements } from "../../lib/stock";
 import { computeDailyStats, computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
 import ItemStockCard from "./ItemStockCard";
+import ItemFormDialog from "./ItemFormDialog";
+import MovementDialog from "./MovementDialog";
 
 type LoadState = "loading" | "idle" | "error";
 
@@ -23,6 +26,8 @@ export default function StockDashboard() {
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState<StockItem | null | "new">(null);
+  const [movingItem, setMovingItem] = useState<StockItem | null>(null);
 
   const load = useCallback(async () => {
     setError("");
@@ -63,6 +68,10 @@ export default function StockDashboard() {
   const daily = useMemo(() => computeDailyStats(movements, selectedDate), [movements, selectedDate]);
   const lowItems = useMemo(() => findLowStockItems(balances), [balances]);
   const grouped = useMemo(() => groupByCategory(balances), [balances]);
+  const categories = useMemo(
+    () => Array.from(new Set(items.map((i) => i.category).filter((c): c is string => !!c))),
+    [items],
+  );
 
   return (
     <section className="admin-layout" aria-labelledby="stock-heading">
@@ -77,6 +86,7 @@ export default function StockDashboard() {
             <CalendarDays size={17} />
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} aria-label="เลือกวันที่" />
           </label>
+          <button className="icon-text-button" type="button" onClick={() => setEditing("new")}><Plus size={17} /> เพิ่มสินค้า</button>
           <button className="icon-text-button" type="button" onClick={() => void load()} disabled={loadState === "loading"}>
             {loadState === "loading" ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
@@ -107,7 +117,14 @@ export default function StockDashboard() {
           <section key={category} className="stock-group" aria-label={category}>
             <h2 className="stock-group-title">{category}</h2>
             <div className="stock-card-grid">
-              {group.map((balance) => <ItemStockCard key={balance.item.id} balance={balance} />)}
+              {group.map((balance) => (
+                <ItemStockCard
+                  key={balance.item.id}
+                  balance={balance}
+                  onEdit={() => setEditing(balance.item)}
+                  onRecord={() => setMovingItem(balance.item)}
+                />
+              ))}
             </div>
           </section>
         ))
@@ -120,6 +137,23 @@ export default function StockDashboard() {
       )}
 
       <RecentMovements movements={movements} items={items} />
+
+      {editing ? (
+        <ItemFormDialog
+          item={editing === "new" ? undefined : editing}
+          categorySuggestions={categories}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); void load(); }}
+        />
+      ) : null}
+      {movingItem ? (
+        <MovementDialog
+          item={movingItem}
+          allowedTypes={["in", "out", "waste"]}
+          onClose={() => setMovingItem(null)}
+          onSaved={() => { setMovingItem(null); void load(); }}
+        />
+      ) : null}
     </section>
   );
 }

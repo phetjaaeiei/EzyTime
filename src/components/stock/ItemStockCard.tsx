@@ -7,7 +7,13 @@ const COLOR_WITHDRAWN = "var(--accent)";
 const COLOR_WASTE = "var(--danger)";
 const COLOR_ONHAND = "var(--primary)";
 
-export default function ItemStockCard({ balance }: { balance: ItemBalance }) {
+interface Props {
+  balance: ItemBalance;
+  onEdit?: () => void;
+  onRecord?: () => void;
+}
+
+export default function ItemStockCard({ balance, onEdit, onRecord }: Props) {
   const { item, received, withdrawn, waste, onHand, isLow } = balance;
   const fmt = (value: number) => `${formatQuantity(value)} ${item.unit}`;
 
@@ -42,6 +48,13 @@ export default function ItemStockCard({ balance }: { balance: ItemBalance }) {
           <li className="muted-copy">รับเข้าทั้งหมด {fmt(received)}</li>
         </ul>
       </div>
+
+      {(onEdit || onRecord) ? (
+        <div className="stock-card-actions">
+          {onRecord ? <button className="icon-text-button" type="button" onClick={onRecord}>บันทึก +/−</button> : null}
+          {onEdit ? <button className="icon-text-button quiet" type="button" onClick={onEdit}>แก้ไข</button> : null}
+        </div>
+      ) : null}
     </article>
   );
 }
