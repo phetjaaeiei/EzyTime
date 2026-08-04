@@ -124,7 +124,9 @@ export async function listItems(options: { includeArchived?: boolean } = {}): Pr
   }
 
   const items = readLocal(ITEMS_KEY, demoItems);
-  return items.filter((item) => includeArchived || item.is_active);
+  return items
+    .filter((item) => includeArchived || item.is_active)
+    .sort((a, b) => a.name.localeCompare(b.name, "th-TH"));
 }
 
 export async function createItem(input: NewStockItem): Promise<StockItem> {
@@ -159,16 +161,21 @@ export async function createItem(input: NewStockItem): Promise<StockItem> {
 }
 
 export async function updateItem(id: string, patch: StockItemPatch): Promise<void> {
+  const normalized: StockItemPatch = { ...patch };
+  if (typeof normalized.name === "string") normalized.name = normalized.name.trim();
+  if (typeof normalized.unit === "string") normalized.unit = normalized.unit.trim();
+  if (typeof normalized.category === "string") normalized.category = normalized.category.trim() || null;
+
   if (supabase) {
     const { error } = await supabase
       .from("stock_items")
-      .update({ ...patch, updated_at: nowIso() })
+      .update({ ...normalized, updated_at: nowIso() })
       .eq("id", id);
     if (error) throw new Error(error.message);
     return;
   }
   const items = readLocal(ITEMS_KEY, demoItems).map((item) =>
-    item.id === id ? { ...item, ...patch, updated_at: nowIso() } : item,
+    item.id === id ? { ...item, ...normalized, updated_at: nowIso() } : item,
   );
   writeLocal(ITEMS_KEY, items);
 }
@@ -195,10 +202,17 @@ export async function listMovements(
 
   let moves = readLocal(MOVES_KEY, demoMovements);
   if (options.itemId) moves = moves.filter((move) => move.item_id === options.itemId);
+  if (options.mine) {
+    const uid = await currentUserId();
+    moves = moves.filter((move) => move.user_id === uid);
+  }
   return [...moves].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 }
 
 export async function recordMovement(input: NewMovement): Promise<StockMovement> {
+  if (!(input.quantity > 0)) {
+    throw new Error("จำนวนต้องมากกว่า 0");
+  }
   const actorName = await getStockActorName();
 
   if (supabase) {
