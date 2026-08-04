@@ -4,6 +4,8 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   CalendarDays,
+  Eye,
+  EyeOff,
   Loader2,
   PackageSearch,
   Plus,
@@ -11,7 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { ItemBalance, StockItem, StockMovement } from "../../types";
-import { listItems, listMovements } from "../../lib/stock";
+import { listItems, listMovements, updateItem } from "../../lib/stock";
 import { computeDailyStats, computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
 import { useAsyncData } from "../../lib/useAsyncData";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
@@ -23,9 +25,10 @@ export default function StockDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => formatDateInput(new Date()));
   const [editing, setEditing] = useState<StockItem | null | "new">(null);
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const loadStock = useCallback(async () => {
-    const [items, movements] = await Promise.all([listItems(), listMovements()]);
+    const [items, movements] = await Promise.all([listItems({ includeArchived: true }), listMovements()]);
     return { items, movements };
   }, []);
   const { data, loading, error, reload } = useAsyncData(loadStock, {
@@ -35,12 +38,29 @@ export default function StockDashboard() {
   const { items, movements } = data;
 
   const balances = useMemo(() => computeItemBalances(items, movements), [items, movements]);
+  const activeBalances = useMemo(() => balances.filter((b) => b.item.is_active), [balances]);
+  const visibleBalances = useMemo(
+    () => (showArchived ? balances : activeBalances),
+    [showArchived, balances, activeBalances],
+  );
+  const archivedCount = balances.length - activeBalances.length;
   const daily = useMemo(() => computeDailyStats(movements, selectedDate), [movements, selectedDate]);
-  const lowItems = useMemo(() => findLowStockItems(balances), [balances]);
-  const grouped = useMemo(() => groupByCategory(balances), [balances]);
+  const lowItems = useMemo(() => findLowStockItems(activeBalances), [activeBalances]);
+  const grouped = useMemo(() => groupByCategory(visibleBalances), [visibleBalances]);
   const categories = useMemo(
     () => Array.from(new Set(items.map((i) => i.category).filter((c): c is string => !!c))),
     [items],
+  );
+
+  const handleRestore = useCallback(
+    async (item: StockItem) => {
+      try {
+        await updateItem(item.id, { is_active: true });
+      } finally {
+        reload();
+      }
+    },
+    [reload],
   );
 
   return (
@@ -57,6 +77,17 @@ export default function StockDashboard() {
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} aria-label="เลือกวันที่" />
           </label>
           <button className="icon-text-button" type="button" onClick={() => setEditing("new")}><Plus size={17} /> เพิ่มสินค้า</button>
+          {archivedCount > 0 ? (
+            <button
+              className={showArchived ? "icon-text-button" : "icon-text-button quiet"}
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              aria-pressed={showArchived}
+            >
+              {showArchived ? <EyeOff size={17} /> : <Eye size={17} />}
+              {showArchived ? "ซ่อนที่ปิดใช้งาน" : `ที่ปิดใช้งาน (${archivedCount})`}
+            </button>
+          ) : null}
           <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading}>
             {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
@@ -68,7 +99,7 @@ export default function StockDashboard() {
         <StockStat icon={<ArrowUpCircle size={20} />} label="รับเข้าวันนี้" value={formatQuantity(daily.received)} />
         <StockStat icon={<ArrowDownCircle size={20} />} label="เบิกออกวันนี้" value={formatQuantity(daily.withdrawn)} />
         <StockStat icon={<Trash2 size={20} />} label="ของเสียวันนี้" value={formatQuantity(daily.waste)} />
-        <StockStat icon={<PackageSearch size={20} />} label="รายการสินค้า" value={`${items.length} อย่าง`} />
+        <StockStat icon={<PackageSearch size={20} />} label="รายการสินค้า" value={`${activeBalances.length} อย่าง`} />
       </div>
 
       {lowItems.length ? (
@@ -82,19 +113,27 @@ export default function StockDashboard() {
         <div className="inline-error" role="alert">{error}</div>
       ) : loading ? (
         <TableSkeleton />
-      ) : balances.length ? (
+      ) : visibleBalances.length ? (
         grouped.map(([category, group]) => (
           <section key={category} className="stock-group" aria-label={category}>
             <h2 className="stock-group-title">{category}</h2>
             <div className="stock-card-grid">
-              {group.map((balance) => (
-                <ItemStockCard
-                  key={balance.item.id}
-                  balance={balance}
-                  onEdit={() => setEditing(balance.item)}
-                  onRecord={() => setMovingItem(balance.item)}
-                />
-              ))}
+              {group.map((balance) =>
+                balance.item.is_active ? (
+                  <ItemStockCard
+                    key={balance.item.id}
+                    balance={balance}
+                    onEdit={() => setEditing(balance.item)}
+                    onRecord={() => setMovingItem(balance.item)}
+                  />
+                ) : (
+                  <ItemStockCard
+                    key={balance.item.id}
+                    balance={balance}
+                    onRestore={() => void handleRestore(balance.item)}
+                  />
+                ),
+              )}
             </div>
           </section>
         ))

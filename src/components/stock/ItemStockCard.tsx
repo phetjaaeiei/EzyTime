@@ -11,20 +11,24 @@ interface Props {
   balance: ItemBalance;
   onEdit?: () => void;
   onRecord?: () => void;
+  onRestore?: () => void;
 }
 
-export default function ItemStockCard({ balance, onEdit, onRecord }: Props) {
+export default function ItemStockCard({ balance, onEdit, onRecord, onRestore }: Props) {
   const { item, received, withdrawn, waste, onHand, isLow } = balance;
   const fmt = (value: number) => `${formatQuantity(value)} ${item.unit}`;
+  const archived = !item.is_active;
+  const className = `stock-card${isLow && !archived ? " is-low" : ""}${archived ? " is-archived" : ""}`;
 
   return (
-    <article className={isLow ? "stock-card is-low" : "stock-card"}>
+    <article className={className}>
       <header className="stock-card-head">
         <div>
           <h3>{item.name}</h3>
           {item.category ? <span className="stock-chip">{item.category}</span> : null}
+          {archived ? <span className="stock-chip muted">ปิดใช้งาน</span> : null}
         </div>
-        {isLow ? (
+        {isLow && !archived ? (
           <span className="low-badge" title="ของใกล้หมด">
             <AlertTriangle size={14} /> ใกล้หมด
           </span>
@@ -49,8 +53,9 @@ export default function ItemStockCard({ balance, onEdit, onRecord }: Props) {
         </ul>
       </div>
 
-      {(onEdit || onRecord) ? (
+      {(onEdit || onRecord || onRestore) ? (
         <div className="stock-card-actions">
+          {onRestore ? <button className="icon-text-button" type="button" onClick={onRestore}>เปิดใช้งานอีกครั้ง</button> : null}
           {onRecord ? <button className="icon-text-button" type="button" onClick={onRecord}>บันทึก +/−</button> : null}
           {onEdit ? <button className="icon-text-button quiet" type="button" onClick={onEdit}>แก้ไข</button> : null}
         </div>
