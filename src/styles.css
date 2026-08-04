@@ -250,6 +250,24 @@ button.brand-button:hover {
   padding-bottom: var(--space-lg);
 }
 
+.page-frame:has(.employee-login-shell) {
+  display: grid;
+  align-items: center;
+  width: min(760px, calc(100% - 2rem));
+  min-height: calc(100dvh - 76px);
+  padding-top: var(--space-lg);
+  padding-bottom: var(--space-lg);
+}
+
+.employee-login-shell,
+.employee-login-shell .employee-auth-layout {
+  width: 100%;
+}
+
+.employee-login-shell .employee-auth-layout {
+  display: block;
+}
+
 .eyebrow-row {
   display: inline-flex;
   align-items: center;

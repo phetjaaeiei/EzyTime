@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Clock3, Info, Menu, PackageMinus, X } from "lucide-react";
+import { getEmployeeSession, onEmployeeAuthChange } from "../lib/store";
+import { isSupabaseConfigured } from "../lib/supabase";
 
 type EmployeeRoute = "clock" | "stock";
 
@@ -11,6 +13,26 @@ interface Props {
 
 export default function EmployeeShell({ route, onNavigate, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | undefined>(() =>
+    isSupabaseConfigured ? undefined : true,
+  );
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let mounted = true;
+    getEmployeeSession()
+      .then((session) => {
+        if (mounted) setIsAuthenticated(Boolean(session));
+      })
+      .catch(() => {
+        if (mounted) setIsAuthenticated(false);
+      });
+    const unsubscribe = onEmployeeAuthChange((session) => setIsAuthenticated(Boolean(session)));
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -27,6 +49,10 @@ export default function EmployeeShell({ route, onNavigate, children }: Props) {
   }
 
   const currentLabel = route === "clock" ? "ลงเวลา" : "เบิกของ";
+
+  if (isAuthenticated !== true) {
+    return <div className="employee-login-shell">{children}</div>;
+  }
 
   return (
     <div className="admin-shell employee-shell">
