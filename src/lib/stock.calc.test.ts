@@ -77,6 +77,13 @@ describe("computeItemBalances", () => {
     const balances = computeItemBalances([item({ id: "x" })], [move({ item_id: "ghost" })]);
     expect(balances[0].received).toBe(0);
   });
+
+  it("flags low stock when onHand exactly equals the threshold", () => {
+    const boundaryItem = item({ id: "c", low_stock_threshold: 5 });
+    const balances = computeItemBalances([boundaryItem], [move({ item_id: "c", type: "in", quantity: 5 })]);
+    expect(balances[0].onHand).toBe(5);
+    expect(balances[0].isLow).toBe(true);
+  });
 });
 
 describe("computeDailyStats", () => {

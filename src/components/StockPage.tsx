@@ -27,7 +27,7 @@ function GoogleGate() {
     return () => { mounted = false; unsub(); };
   }, []);
 
-  if (session === undefined) return <section className="clock-layout"><div className="skeleton-heading" /></section>;
+  if (session === undefined) return <section className="clock-layout" aria-label="กำลังโหลด"><div className="skeleton-heading" /></section>;
   if (!session) return <SignInPanel />;
   return <StockWithdrawUI />;
 }
