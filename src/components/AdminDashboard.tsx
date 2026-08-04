@@ -1,9 +1,11 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  Boxes,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  Clock3,
   Copy,
   Download,
   Loader2,
@@ -17,6 +19,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { AuthSession, SummaryRow, TimeLog } from "../types";
+import StockDashboard from "./stock/StockDashboard";
 import {
   exportLogsCsv,
   fetchLogsByDate,
@@ -67,7 +70,42 @@ export default function AdminDashboard() {
     return <LoginPanel onSignedIn={setSession} />;
   }
 
-  return <Dashboard session={session} onSignedOut={() => setSession(null)} />;
+  return <AdminConsole session={session} onSignedOut={() => setSession(null)} />;
+}
+
+type AdminModule = "attendance" | "stock";
+
+function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSignedOut: () => void }) {
+  const [module, setModule] = useState<AdminModule>("attendance");
+  return (
+    <div>
+      <div className="module-switcher" role="tablist" aria-label="เลือกโมดูล">
+        <button
+          role="tab"
+          aria-selected={module === "attendance"}
+          className={module === "attendance" ? "module-tab is-active" : "module-tab"}
+          type="button"
+          onClick={() => setModule("attendance")}
+        >
+          <Clock3 size={18} /> เวลาทำงาน
+        </button>
+        <button
+          role="tab"
+          aria-selected={module === "stock"}
+          className={module === "stock" ? "module-tab is-active" : "module-tab"}
+          type="button"
+          onClick={() => setModule("stock")}
+        >
+          <Boxes size={18} /> สต๊อกสินค้า
+        </button>
+      </div>
+      {module === "attendance" ? (
+        <Dashboard session={session} onSignedOut={onSignedOut} />
+      ) : (
+        <StockDashboard />
+      )}
+    </div>
+  );
 }
 
 function LoginPanel({ onSignedIn }: { onSignedIn: (session: AuthSession) => void }) {
