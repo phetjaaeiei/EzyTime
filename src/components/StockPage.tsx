@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Boxes, Loader2, LogIn, PackageMinus } from "lucide-react";
+import { Boxes, History, Loader2, LogIn, PackageMinus } from "lucide-react";
 import type { EmployeeSession, StockItem, StockMovement } from "../types";
 import {
   getEmployeeSession,
@@ -70,45 +70,67 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   const todayMine = movements.filter((m) => new Date(m.created_at).toDateString() === new Date().toDateString());
 
   return (
-    <section className="clock-layout" aria-labelledby="emp-stock-heading">
-      <div className="clock-hero">
+    <section className="clock-layout employee-stock-layout" aria-labelledby="emp-stock-heading">
+      <div className="clock-hero employee-stock-hero">
         <div className="eyebrow-row"><span className="status-dot" />{demo ? "โหมดทดลอง" : "เบิกของ"}</div>
         <h1 id="emp-stock-heading">เบิกของเข้าครัว</h1>
         <p className="lead-copy">เลือกสินค้าแล้วกดเบิก ระบบจะบันทึกชื่อและเวลาให้อัตโนมัติ</p>
       </div>
 
-      <div className="form-panel">
-        {error ? <p className="form-error" role="alert">{error}</p> : null}
-        {loading ? (
-          <div className="skeleton-table">{Array.from({ length: 4 }).map((_, i) => <span key={i} />)}</div>
-        ) : (
-          <ul className="emp-stock-list">
-            {items.map((item) => (
-              <li key={item.id}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <span className="muted-copy">หน่วย: {item.unit}{item.category ? ` · ${item.category}` : ""}</span>
-                </div>
-                <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)}>
-                  <PackageMinus size={17} /> เบิก
-                </button>
-              </li>
-            ))}
-            {!items.length ? <li className="muted-copy">ยังไม่มีสินค้าให้เบิก</li> : null}
-          </ul>
-        )}
+      <div className="employee-stock-panels">
+        <section className="form-panel employee-stock-catalog" aria-labelledby="employee-stock-catalog-heading">
+          <div className="employee-stock-section-heading">
+            <div>
+              <h2 id="employee-stock-catalog-heading">เลือกสินค้า</h2>
+              <p>สินค้าที่พร้อมให้เบิก {items.length} รายการ</p>
+            </div>
+            <span className="employee-stock-section-icon" aria-hidden="true"><Boxes size={20} /></span>
+          </div>
+          {error ? <p className="form-error" role="alert">{error}</p> : null}
+          {loading ? (
+            <div className="skeleton-table">{Array.from({ length: 4 }).map((_, i) => <span key={i} />)}</div>
+          ) : (
+            <ul className="emp-stock-list">
+              {items.map((item) => (
+                <li key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span className="muted-copy">หน่วย: {item.unit}{item.category ? ` · ${item.category}` : ""}</span>
+                  </div>
+                  <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)}>
+                    <PackageMinus size={17} /> เบิก
+                  </button>
+                </li>
+              ))}
+              {!items.length ? <li className="muted-copy">ยังไม่มีสินค้าให้เบิก</li> : null}
+            </ul>
+          )}
+        </section>
 
-        {todayMine.length ? (
-          <div className="emp-today">
-            <h2>ที่ฉันเบิกวันนี้</h2>
-            <ul>
+        <section className="form-panel employee-stock-history" aria-labelledby="employee-stock-history-heading">
+          <div className="employee-stock-section-heading">
+            <div>
+              <h2 id="employee-stock-history-heading">ที่ฉันเบิกวันนี้</h2>
+              <p>{todayMine.length ? `${todayMine.length} รายการล่าสุด` : "ยังไม่มีรายการวันนี้"}</p>
+            </div>
+            <span className="employee-stock-section-icon is-history" aria-hidden="true"><History size={20} /></span>
+          </div>
+          {todayMine.length ? (
+            <ul className="employee-stock-history-list">
               {todayMine.map((m) => {
                 const item = items.find((i) => i.id === m.item_id);
-                return <li key={m.id}>{item?.name ?? "—"} {formatQuantity(m.quantity)} {item?.unit ?? ""} · {formatTime(m.created_at)} น.</li>;
+                return (
+                  <li key={m.id}>
+                    <div><strong>{item?.name ?? "—"}</strong><span>{formatQuantity(m.quantity)} {item?.unit ?? ""}</span></div>
+                    <time>{formatTime(m.created_at)} น.</time>
+                  </li>
+                );
               })}
             </ul>
-          </div>
-        ) : null}
+          ) : (
+            <p className="employee-stock-history-empty">รายการที่เบิกจะมาแสดงตรงนี้</p>
+          )}
+        </section>
       </div>
 
       {movingItem ? (
