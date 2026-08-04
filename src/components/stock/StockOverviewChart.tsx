@@ -44,8 +44,9 @@ function UnitBarChart({ unit, balances }: { unit: string; balances: ItemBalance[
         {sorted.map((balance) => {
           const value = Math.max(0, balance.onHand);
           const percent = maxValue > 0 ? value / maxValue * 100 : 0;
+          const className = `stock-bar-color-${colorIndex(balance.item.id)}${balance.isLow ? " is-low" : ""}`;
           return (
-            <li key={balance.item.id} className={balance.isLow ? "is-low" : undefined}>
+            <li key={balance.item.id} className={className}>
               <div className="stock-bar-heading">
                 <span className="stock-bar-name">
                   {balance.item.name}
@@ -82,4 +83,10 @@ function groupByUnit(balances: ItemBalance[]): [string, ItemBalance[]][] {
 
 function slug(value: string): string {
   return Array.from(value).map((character) => character.codePointAt(0)?.toString(36)).join("-");
+}
+
+function colorIndex(id: string): number {
+  let hash = 0;
+  for (const character of id) hash = (hash * 31 + (character.codePointAt(0) ?? 0)) >>> 0;
+  return hash % 10;
 }
