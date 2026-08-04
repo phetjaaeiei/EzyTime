@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowDownCircle,
@@ -13,56 +13,26 @@ import {
 import type { ItemBalance, StockItem, StockMovement } from "../../types";
 import { listItems, listMovements } from "../../lib/stock";
 import { computeDailyStats, computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
+import { useAsyncData } from "../../lib/useAsyncData";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
 import ItemStockCard from "./ItemStockCard";
 import ItemFormDialog from "./ItemFormDialog";
 import MovementDialog from "./MovementDialog";
 
-type LoadState = "loading" | "idle" | "error";
-
 export default function StockDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => formatDateInput(new Date()));
-  const [items, setItems] = useState<StockItem[]>([]);
-  const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [error, setError] = useState("");
   const [editing, setEditing] = useState<StockItem | null | "new">(null);
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
 
-  const load = useCallback(async () => {
-    setError("");
-    setLoadState("loading");
-    try {
-      const [nextItems, nextMoves] = await Promise.all([listItems(), listMovements()]);
-      setItems(nextItems);
-      setMovements(nextMoves);
-      setLoadState("idle");
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "โหลดข้อมูลไม่สำเร็จ");
-      setLoadState("error");
-    }
+  const loadStock = useCallback(async () => {
+    const [items, movements] = await Promise.all([listItems(), listMovements()]);
+    return { items, movements };
   }, []);
-
-  useEffect(() => {
-    let isCurrent = true;
-
-    Promise.all([listItems(), listMovements()])
-      .then(([nextItems, nextMoves]) => {
-        if (!isCurrent) return;
-        setItems(nextItems);
-        setMovements(nextMoves);
-        setLoadState("idle");
-      })
-      .catch((cause) => {
-        if (!isCurrent) return;
-        setError(cause instanceof Error ? cause.message : "โหลดข้อมูลไม่สำเร็จ");
-        setLoadState("error");
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
+  const { data, loading, error, reload } = useAsyncData(loadStock, {
+    items: [] as StockItem[],
+    movements: [] as StockMovement[],
+  });
+  const { items, movements } = data;
 
   const balances = useMemo(() => computeItemBalances(items, movements), [items, movements]);
   const daily = useMemo(() => computeDailyStats(movements, selectedDate), [movements, selectedDate]);
@@ -87,8 +57,8 @@ export default function StockDashboard() {
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} aria-label="เลือกวันที่" />
           </label>
           <button className="icon-text-button" type="button" onClick={() => setEditing("new")}><Plus size={17} /> เพิ่มสินค้า</button>
-          <button className="icon-text-button" type="button" onClick={() => void load()} disabled={loadState === "loading"}>
-            {loadState === "loading" ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
+          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading}>
+            {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
           </button>
         </div>
@@ -108,9 +78,9 @@ export default function StockDashboard() {
         </div>
       ) : null}
 
-      {loadState === "error" ? (
+      {error ? (
         <div className="inline-error" role="alert">{error}</div>
-      ) : loadState === "loading" ? (
+      ) : loading ? (
         <TableSkeleton />
       ) : balances.length ? (
         grouped.map(([category, group]) => (
@@ -143,7 +113,7 @@ export default function StockDashboard() {
           item={editing === "new" ? undefined : editing}
           categorySuggestions={categories}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); void load(); }}
+          onSaved={() => { setEditing(null); void reload(); }}
         />
       ) : null}
       {movingItem ? (
@@ -151,7 +121,7 @@ export default function StockDashboard() {
           item={movingItem}
           allowedTypes={["in", "out", "waste"]}
           onClose={() => setMovingItem(null)}
-          onSaved={() => { setMovingItem(null); void load(); }}
+          onSaved={() => { setMovingItem(null); void reload(); }}
         />
       ) : null}
     </section>

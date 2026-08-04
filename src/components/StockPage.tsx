@@ -10,6 +10,7 @@ import {
 import { isSupabaseConfigured } from "../lib/supabase";
 import { listItems, listMovements } from "../lib/stock";
 import { formatQuantity } from "../lib/stock.calc";
+import { useAsyncData } from "../lib/useAsyncData";
 import { formatTime } from "../lib/time";
 import MovementDialog from "./stock/MovementDialog";
 
@@ -55,45 +56,17 @@ function SignInPanel() {
 }
 
 function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
-  const [items, setItems] = useState<StockItem[]>([]);
-  const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true); setError("");
-    try {
-      const [nextItems, mine] = await Promise.all([listItems(), listMovements({ mine: true })]);
-      setItems(nextItems);
-      setMovements(mine);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "โหลดข้อมูลไม่สำเร็จ");
-    } finally {
-      setLoading(false);
-    }
+  const loadStock = useCallback(async () => {
+    const [items, mine] = await Promise.all([listItems(), listMovements({ mine: true })]);
+    return { items, movements: mine };
   }, []);
-
-  useEffect(() => {
-    let isCurrent = true;
-
-    Promise.all([listItems(), listMovements({ mine: true })])
-      .then(([nextItems, mine]) => {
-        if (!isCurrent) return;
-        setItems(nextItems);
-        setMovements(mine);
-        setLoading(false);
-      })
-      .catch((cause) => {
-        if (!isCurrent) return;
-        setError(cause instanceof Error ? cause.message : "โหลดข้อมูลไม่สำเร็จ");
-        setLoading(false);
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
+  const { data, loading, error, reload } = useAsyncData(loadStock, {
+    items: [] as StockItem[],
+    movements: [] as StockMovement[],
+  });
+  const { items, movements } = data;
 
   const todayMine = movements.filter((m) => new Date(m.created_at).toDateString() === new Date().toDateString());
 
@@ -151,7 +124,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
           item={movingItem}
           allowedTypes={["out", "waste"]}
           onClose={() => setMovingItem(null)}
-          onSaved={() => { setMovingItem(null); void load(); }}
+          onSaved={() => { setMovingItem(null); void reload(); }}
         />
       ) : null}
     </section>
