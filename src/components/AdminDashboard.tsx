@@ -297,8 +297,8 @@ function Dashboard() {
   }
 
   return (
-    <section className="admin-layout" aria-labelledby="admin-heading">
-      <div className="admin-heading-row">
+    <section className="admin-layout admin-dashboard-layout" aria-labelledby="admin-heading">
+      <div className="admin-heading-row admin-dashboard-heading">
         <div>
           <div className="eyebrow-row">
             <span className="status-dot" />
@@ -329,17 +329,52 @@ function Dashboard() {
         </div>
       </div>
 
+      <div className="stat-grid" aria-label="ภาพรวมรายวัน">
+        <StatCard icon={<UsersRound size={20} />} label="พนักงานวันนี้" value={`${summaryRows.length} คน`} />
+        <StatCard icon={<UserRoundCheck size={20} />} label="บันทึกครบ" value={`${completeCount} คน`} />
+        <StatCard icon={<ClipboardList size={20} />} label="รอออกงาน" value={`${missingOutCount} คน`} />
+        <StatCard icon={<Timer size={20} />} label="รวมเวลาทำงาน" value={formatDuration(totalMinutes)} />
+      </div>
+
       <div className="dashboard-grid">
+        <section className="table-panel" aria-labelledby="table-heading">
+          <div className="section-heading-row">
+            <div>
+              <h2 id="table-heading">ตารางสรุป</h2>
+              <p className="muted-copy">ชื่อ ตำแหน่ง เวลาเข้า เวลาออก และเวลาทำงานทั้งหมด</p>
+            </div>
+            <button className="icon-text-button" type="button" onClick={() => exportLogsCsv(logs)} disabled={!logs.length}>
+              <Download size={17} />
+              Export CSV
+            </button>
+          </div>
+
+          {loadState === "error" ? (
+            <div className="inline-error" role="alert">
+              {error}
+            </div>
+          ) : loadState === "loading" ? (
+            <TableSkeleton />
+          ) : summaryRows.length ? (
+            <SummaryTable rows={summaryRows} />
+          ) : (
+            <EmptyState />
+          )}
+        </section>
+
         <aside className="qr-panel" aria-labelledby="qr-heading">
           <div className="panel-title">
+            <div>
+              <h2 id="qr-heading">QR สำหรับพนักงาน</h2>
+              <p>ใช้สำหรับเปิดหน้าลงเวลา</p>
+            </div>
             <QrCode size={19} />
-            <h2 id="qr-heading">QR สำหรับพนักงาน</h2>
           </div>
           <div className="qr-box">
-            <QRCodeSVG value={clockUrl} size={180} marginSize={2} />
+            <QRCodeSVG value={clockUrl} size={150} marginSize={2} />
           </div>
           <div className="qr-link">{clockUrl}</div>
-          <div className="button-row">
+          <div className="button-row qr-actions">
             <button className="icon-text-button" type="button" onClick={handleCopy}>
               {copied ? <CheckCircle2 size={17} /> : <Copy size={17} />}
               {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
@@ -350,40 +385,6 @@ function Dashboard() {
             </button>
           </div>
         </aside>
-
-        <div className="summary-area">
-          <div className="stat-grid" aria-label="ภาพรวมรายวัน">
-            <StatCard icon={<UsersRound size={20} />} label="พนักงานวันนี้" value={`${summaryRows.length} คน`} />
-            <StatCard icon={<UserRoundCheck size={20} />} label="บันทึกครบ" value={`${completeCount} คน`} />
-            <StatCard icon={<ClipboardList size={20} />} label="รอออกงาน" value={`${missingOutCount} คน`} />
-            <StatCard icon={<Timer size={20} />} label="รวมเวลาทำงาน" value={formatDuration(totalMinutes)} />
-          </div>
-
-          <section className="table-panel" aria-labelledby="table-heading">
-            <div className="section-heading-row">
-              <div>
-                <h2 id="table-heading">ตารางสรุป</h2>
-                <p className="muted-copy">ชื่อ ตำแหน่ง เวลาเข้า เวลาออก และเวลาทำงานทั้งหมด</p>
-              </div>
-              <button className="icon-text-button" type="button" onClick={() => exportLogsCsv(logs)} disabled={!logs.length}>
-                <Download size={17} />
-                Export CSV
-              </button>
-            </div>
-
-            {loadState === "error" ? (
-              <div className="inline-error" role="alert">
-                {error}
-              </div>
-            ) : loadState === "loading" ? (
-              <TableSkeleton />
-            ) : summaryRows.length ? (
-              <SummaryTable rows={summaryRows} />
-            ) : (
-              <EmptyState />
-            )}
-          </section>
-        </div>
       </div>
 
       <section className="activity-panel" aria-labelledby="activity-heading">
