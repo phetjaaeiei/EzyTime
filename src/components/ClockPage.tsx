@@ -236,8 +236,8 @@ function EmployeeClockForm({
   }
 
   return (
-    <section className="clock-layout" aria-labelledby="clock-heading">
-      <div className="clock-hero">
+    <section className="clock-layout employee-clock-layout" aria-labelledby="clock-heading">
+      <div className="clock-hero employee-clock-hero">
         <div className="eyebrow-row">
           <span className="status-dot" />
           สวัสดี {nickname}
@@ -259,7 +259,8 @@ function EmployeeClockForm({
 
       </div>
 
-      <div className="form-panel">
+      <div className="form-panel employee-clock-form-panel">
+        {!savedLog ? <ClockFormHeading /> : null}
         {savedLog ? (
           <div className="success-state" role="status" aria-live="polite">
             <CheckCircle2 size={42} />
@@ -332,6 +333,18 @@ function EmployeeClockForm({
   );
 }
 
+function ClockFormHeading() {
+  return (
+    <div className="employee-clock-form-heading">
+      <div>
+        <h2>รายละเอียดการลงเวลา</h2>
+        <p>เลือกประเภทเวลาและตำแหน่งงาน</p>
+      </div>
+      <span aria-hidden="true"><BriefcaseBusiness size={20} /></span>
+    </div>
+  );
+}
+
 function ClockSkeleton() {
   return (
     <section className="clock-layout" aria-label="กำลังโหลด">
@@ -397,8 +410,8 @@ function DemoClockForm() {
   }
 
   return (
-    <section className="clock-layout" aria-labelledby="clock-heading">
-      <div className="clock-hero">
+    <section className="clock-layout employee-clock-layout" aria-labelledby="clock-heading">
+      <div className="clock-hero employee-clock-hero">
         <div className="eyebrow-row">
           <span className="status-dot" />
           เวลาจาก QR (โหมดทดลอง)
@@ -419,7 +432,8 @@ function DemoClockForm() {
         </div>
       </div>
 
-      <div className="form-panel">
+      <div className="form-panel employee-clock-form-panel">
+        {!savedLog ? <ClockFormHeading /> : null}
         {savedLog ? (
           <div className="success-state" role="status" aria-live="polite">
             <CheckCircle2 size={42} />

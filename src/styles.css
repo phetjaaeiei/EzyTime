@@ -354,6 +354,71 @@ button.brand-button:hover {
   line-height: 1.2;
 }
 
+.employee-clock-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 0.85fr);
+  align-items: start;
+  gap: 20px;
+  width: min(100%, 1100px);
+  margin-inline: auto;
+}
+
+.employee-clock-hero {
+  align-content: start;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 24px;
+}
+
+.employee-clock-hero .eyebrow-row {
+  width: fit-content;
+}
+
+.employee-clock-hero .scan-ticket {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.form-panel.employee-clock-form-panel {
+  min-height: 0;
+  padding: 24px;
+}
+
+.employee-clock-form-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.employee-clock-form-heading h2 {
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.employee-clock-form-heading p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.employee-clock-form-heading > span {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.employee-clock-form-panel .success-state {
+  min-height: 320px;
+}
+
 .form-panel,
 .login-panel,
 .qr-panel,
@@ -1317,6 +1382,12 @@ tbody tr:hover {
   }
 
   .dialog-actions > button { flex: 1; min-width: 0; }
+
+  .employee-clock-layout { gap: var(--space-lg); }
+  .employee-clock-hero { gap: var(--space-lg); border: 0; background: transparent; padding: var(--space-md) 0 0; }
+  .employee-clock-form-panel { padding: var(--space-md); }
+  .employee-clock-form-heading { display: none; }
+  .employee-clock-form-panel .success-state { min-height: 360px; }
 
   .employee-stock-layout { gap: var(--space-lg); }
   .employee-stock-hero { gap: var(--space-lg); border: 0; background: transparent; padding: var(--space-md) 0 0; }
