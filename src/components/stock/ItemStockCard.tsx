@@ -46,10 +46,25 @@ export default function ItemStockCard({ balance, onEdit, onRecord, onRestore }: 
           centerSub={`เหลือ (${item.unit})`}
         />
         <ul className="stock-legend">
-          <li><span className="dot" style={{ background: COLOR_ONHAND }} /> คงเหลือ <strong>{fmt(onHand)}</strong></li>
-          <li><span className="dot" style={{ background: COLOR_WITHDRAWN }} /> เบิกใช้ <strong>{fmt(withdrawn)}</strong></li>
-          <li><span className="dot" style={{ background: COLOR_WASTE }} /> ของเสีย <strong>{fmt(waste)}</strong></li>
-          <li className="muted-copy">รับเข้าทั้งหมด {fmt(received)}</li>
+          <li>
+            <span className="dot" style={{ background: COLOR_ONHAND }} />
+            <span className="stock-legend-label">คงเหลือ</span>
+            <strong>{fmt(onHand)}</strong>
+          </li>
+          <li>
+            <span className="dot" style={{ background: COLOR_WITHDRAWN }} />
+            <span className="stock-legend-label">เบิกใช้</span>
+            <strong>{fmt(withdrawn)}</strong>
+          </li>
+          <li>
+            <span className="dot" style={{ background: COLOR_WASTE }} />
+            <span className="stock-legend-label">ของเสีย</span>
+            <strong>{fmt(waste)}</strong>
+          </li>
+          <li className="stock-total muted-copy">
+            <span>รับเข้าทั้งหมด</span>
+            <strong>{fmt(received)}</strong>
+          </li>
         </ul>
       </div>
 
