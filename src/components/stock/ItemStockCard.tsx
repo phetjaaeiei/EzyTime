@@ -31,7 +31,7 @@ export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, on
           {archived ? <span className="stock-chip muted">ปิดใช้งาน</span> : null}
         </div>
         <div className="stock-card-head-actions">
-          {isLow && !archived ? (
+          {(isLow || isOutOfStock) && !archived ? (
             <span className={isOutOfStock ? "low-badge is-out" : "low-badge"} title={isOutOfStock ? "สินค้าหมดแล้ว" : "ของใกล้หมด"}>
               <AlertTriangle size={14} /> {isOutOfStock ? "หมดแล้ว" : "ใกล้หมด"}
             </span>

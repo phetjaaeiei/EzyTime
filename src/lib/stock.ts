@@ -8,6 +8,7 @@ import type {
 } from "../types";
 import { extractNickname } from "./employee";
 import { supabase } from "./supabase";
+import { STOCK_CATALOG } from "./stock.catalog";
 
 const ITEMS_KEY = "ezytime.stock.items.v1";
 const MOVES_KEY = "ezytime.stock.moves.v1";
@@ -18,16 +19,8 @@ const OPENING_BALANCE_DATE = "2000-01-01T00:00:00.000Z";
 function nowIso(): string {
   return new Date().toISOString();
 }
-function hoursAgo(hours: number): string {
-  return new Date(Date.now() - hours * 3_600_000).toISOString();
-}
-
 const demoItems: StockItem[] = [
-  seedItem("s-1", "เนื้อสันคอ", "กก.", "เนื้อ", 5),
-  seedItem("s-2", "หมูสไลด์", "กก.", "เนื้อ", 8),
-  seedItem("s-3", "ผักกาดขาว", "กก.", "ผัก", 3),
-  seedItem("s-4", "เต้าหู้ไข่", "แพ็ค", "ผัก", 10),
-  seedItem("s-5", "น้ำจิ้มสุกี้", "ขวด", "เครื่องปรุง", 6),
+  ...STOCK_CATALOG.map((item, index) => seedItem(`catalog-${index + 1}`, item.name, item.unit, item.category, 0)),
 ];
 
 function seedItem(
@@ -44,43 +37,12 @@ function seedItem(
     category,
     low_stock_threshold: threshold,
     is_active: true,
-    created_at: hoursAgo(72),
-    updated_at: hoursAgo(72),
+    created_at: nowIso(),
+    updated_at: nowIso(),
   };
 }
 
-const demoMovements: StockMovement[] = [
-  seedMove("s-1", "in", 20, hoursAgo(70), "รับของเช้า"),
-  seedMove("s-1", "out", 12, hoursAgo(5), "เตรียมหน้าร้าน"),
-  seedMove("s-1", "waste", 1, hoursAgo(3), "ตัดส่วนเสีย"),
-  seedMove("s-2", "in", 25, hoursAgo(70), null),
-  seedMove("s-2", "out", 18, hoursAgo(4), null),
-  seedMove("s-3", "in", 10, hoursAgo(48), null),
-  seedMove("s-3", "out", 8, hoursAgo(2), "จัดผักรวม"),
-  seedMove("s-4", "in", 30, hoursAgo(48), null),
-  seedMove("s-4", "out", 12, hoursAgo(6), null),
-  seedMove("s-5", "in", 12, hoursAgo(48), null),
-  seedMove("s-5", "out", 7, hoursAgo(1), null),
-];
-
-function seedMove(
-  itemId: string,
-  type: StockMovement["type"],
-  quantity: number,
-  createdAt: string,
-  note: string | null,
-): StockMovement {
-  return {
-    id: crypto.randomUUID(),
-    item_id: itemId,
-    type,
-    quantity,
-    note,
-    user_id: null,
-    actor_name: "มะลิ",
-    created_at: createdAt,
-  };
-}
+const demoMovements: StockMovement[] = [];
 
 function readLocal<T>(key: string, seed: T): T {
   const raw = window.localStorage.getItem(key);
