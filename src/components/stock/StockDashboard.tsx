@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  ArrowDownCircle,
-  ArrowUpCircle,
   CalendarDays,
   Eye,
   EyeOff,
@@ -10,7 +8,6 @@ import {
   PackageSearch,
   Plus,
   RefreshCw,
-  Trash2,
 } from "lucide-react";
 import type { ItemBalance, StockItem, StockMovement } from "../../types";
 import { listItems, listMovements, updateItem } from "../../lib/stock";
@@ -20,6 +17,7 @@ import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time"
 import ItemStockCard from "./ItemStockCard";
 import ItemFormDialog from "./ItemFormDialog";
 import MovementDialog from "./MovementDialog";
+import StockOverviewChart from "./StockOverviewChart";
 
 export default function StockDashboard() {
   const [selectedDate, setSelectedDate] = useState(() => formatDateInput(new Date()));
@@ -95,12 +93,7 @@ export default function StockDashboard() {
         </div>
       </div>
 
-      <div className="stat-grid" aria-label="สรุปการเคลื่อนไหววันนี้">
-        <StockStat icon={<ArrowUpCircle size={20} />} label="รับเข้าวันนี้" value={formatQuantity(daily.received)} />
-        <StockStat icon={<ArrowDownCircle size={20} />} label="เบิกออกวันนี้" value={formatQuantity(daily.withdrawn)} />
-        <StockStat icon={<Trash2 size={20} />} label="ของเสียวันนี้" value={formatQuantity(daily.waste)} />
-        <StockStat icon={<PackageSearch size={20} />} label="รายการสินค้า" value={`${activeBalances.length} อย่าง`} />
-      </div>
+      {activeBalances.length ? <StockOverviewChart balances={activeBalances} daily={daily} /> : null}
 
       {lowItems.length ? (
         <div className="low-alert" role="status">
@@ -164,15 +157,6 @@ export default function StockDashboard() {
         />
       ) : null}
     </section>
-  );
-}
-
-function StockStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="stat-card">
-      <span aria-hidden="true">{icon}</span>
-      <div><p>{label}</p><strong>{value}</strong></div>
-    </div>
   );
 }
 

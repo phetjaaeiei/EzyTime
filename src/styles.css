@@ -1016,6 +1016,35 @@ tbody tr:hover {
 .donut-center span { font-size: 0.75rem; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .donut circle { transition: none; } }
 
+/* ===== Stock: overall inventory pie ===== */
+.stock-overview {
+  display: grid;
+  gap: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  padding: 20px;
+}
+.stock-overview-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.stock-overview-head h2 { margin: 0; font-size: 1.15rem; line-height: 1.3; }
+.stock-overview-head p { margin: 4px 0 0; color: var(--muted); font-size: 0.875rem; }
+.stock-daily-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 20px; margin: 0; }
+.stock-daily-summary div { display: grid; grid-template-columns: auto auto; align-items: baseline; gap: 6px; white-space: nowrap; }
+.stock-daily-summary dt { color: var(--muted); font-size: 0.8125rem; }
+.stock-daily-summary dd { margin: 0; color: var(--ink); font-weight: 780; font-variant-numeric: tabular-nums; }
+.stock-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 24px; }
+.stock-unit-overview { min-width: 0; border-top: 1px solid var(--border); padding-top: 16px; }
+.stock-unit-overview h3 { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
+.stock-unit-content { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); align-items: center; gap: 20px; }
+.stock-pie { display: block; width: 100%; max-width: 220px; height: auto; overflow: visible; }
+.stock-pie-empty { fill: var(--surface); stroke: var(--border); stroke-width: 2; }
+.stock-pie-value { fill: white; font-size: 0.82rem; font-weight: 800; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: rgb(0 0 0 / 0.28); stroke-width: 2px; }
+.stock-overview-legend { display: grid; gap: 9px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.stock-overview-legend li { display: grid; grid-template-columns: 12px minmax(0, 1fr) max-content; align-items: center; gap: 8px; }
+.stock-overview-dot { width: 12px; height: 12px; border-radius: 3px; }
+.stock-overview-legend li > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
+.stock-overview-legend strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
 /* ===== Stock: module switcher + cards ===== */
 .module-switcher { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border-radius: 10px; margin: 0 0 20px; }
 .module-tab { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; min-height: 44px; border: none; border-radius: 8px; background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
@@ -1074,6 +1103,12 @@ tbody tr:hover {
   .stock-card-grid {
     grid-template-columns: 1fr;
   }
+
+  .stock-overview { padding: 16px; }
+  .stock-overview-head { flex-direction: column; }
+  .stock-daily-summary { justify-content: flex-start; }
+  .stock-unit-content { grid-template-columns: 1fr; justify-items: center; }
+  .stock-overview-legend { width: 100%; }
 }
 
 @media (max-width: 340px) {
