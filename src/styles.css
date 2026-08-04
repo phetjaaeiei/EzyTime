@@ -1032,10 +1032,16 @@ tbody tr:hover {
 .stock-daily-summary div { display: grid; grid-template-columns: auto auto; align-items: baseline; gap: 6px; white-space: nowrap; }
 .stock-daily-summary dt { color: var(--muted); font-size: 0.8125rem; }
 .stock-daily-summary dd { margin: 0; color: var(--ink); font-weight: 780; font-variant-numeric: tabular-nums; }
-.stock-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 24px; }
+.stock-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 24px; }
 .stock-unit-overview { min-width: 0; border-top: 1px solid var(--border); padding-top: 16px; }
-.stock-unit-overview h3 { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
-.stock-unit-content { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); align-items: center; gap: 20px; }
+.stock-unit-overview h3 { width: min(100%, 608px); margin: 0 auto 12px; color: var(--muted); font-size: 0.9rem; }
+.stock-unit-content {
+  display: grid;
+  grid-template-columns: 220px minmax(260px, 360px);
+  justify-content: center;
+  align-items: center;
+  gap: 28px;
+}
 .stock-pie { display: block; width: 100%; max-width: 220px; height: auto; overflow: visible; }
 .stock-pie-empty { fill: var(--surface); stroke: var(--border); stroke-width: 2; }
 .stock-pie-value { fill: white; font-size: 0.82rem; font-weight: 800; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: rgb(0 0 0 / 0.28); stroke-width: 2px; }
