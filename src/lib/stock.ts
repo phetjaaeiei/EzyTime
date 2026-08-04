@@ -212,6 +212,24 @@ export async function listMovements(
   return [...moves].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 }
 
+export async function listStockOnHand(): Promise<Record<string, number>> {
+  if (supabase) {
+    const { data, error } = await supabase.rpc("get_stock_item_balances");
+    if (error) throw new Error(error.message);
+    return Object.fromEntries(
+      ((data ?? []) as Array<{ item_id: string; on_hand: number }>).map((row) => [row.item_id, Number(row.on_hand)]),
+    );
+  }
+
+  const totals: Record<string, number> = {};
+  for (const item of await listItems()) totals[item.id] = 0;
+  for (const movement of await listMovements()) {
+    const direction = movement.type === "in" ? 1 : -1;
+    totals[movement.item_id] = (totals[movement.item_id] ?? 0) + direction * movement.quantity;
+  }
+  return totals;
+}
+
 export async function recordMovement(input: NewMovement): Promise<StockMovement> {
   if (!(input.quantity > 0)) {
     throw new Error("จำนวนต้องมากกว่า 0");

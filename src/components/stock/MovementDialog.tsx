@@ -2,18 +2,20 @@ import { FormEvent, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import type { MovementType, StockItem } from "../../types";
 import { recordMovement } from "../../lib/stock";
+import { formatQuantity } from "../../lib/stock.calc";
 import { Dialog } from "./ItemFormDialog";
 
 interface Props {
   item: StockItem;
   allowedTypes: MovementType[];
+  availableQuantity?: number;
   onClose: () => void;
   onSaved: () => void;
 }
 
 const TYPE_LABEL: Record<MovementType, string> = { in: "รับเข้า", out: "เบิกออก", waste: "ของเสีย" };
 
-export default function MovementDialog({ item, allowedTypes, onClose, onSaved }: Props) {
+export default function MovementDialog({ item, allowedTypes, availableQuantity, onClose, onSaved }: Props) {
   const [type, setType] = useState<MovementType>(allowedTypes[0]);
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
@@ -25,6 +27,10 @@ export default function MovementDialog({ item, allowedTypes, onClose, onSaved }:
     const qty = Number(quantity);
     if (!Number.isFinite(qty) || qty <= 0) {
       setError("จำนวนต้องมากกว่า 0");
+      return;
+    }
+    if (type !== "in" && availableQuantity !== undefined && qty > availableQuantity) {
+      setError(`คงเหลือไม่พอ มีสินค้าให้เบิก ${formatQuantity(availableQuantity)} ${item.unit}`);
       return;
     }
     setError("");
@@ -56,7 +62,7 @@ export default function MovementDialog({ item, allowedTypes, onClose, onSaved }:
           </div>
         ) : null}
         <label className="field"><span>จำนวน ({item.unit})</span>
-          <input type="number" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} autoFocus required />
+          <input type="number" min="0" max={type === "in" ? undefined : availableQuantity} step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} autoFocus required />
         </label>
         <label className="field"><span>โน้ต (ไม่บังคับ)</span>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="เช่น เตรียมหน้าร้าน" />

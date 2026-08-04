@@ -52,7 +52,7 @@ function UnitBarChart({ unit, balances }: { unit: string; balances: ItemBalance[
               <div className="stock-bar-row">
                 <span className="stock-bar-name">
                   {balance.item.name}
-                  {balance.isLow ? <small>ใกล้หมด</small> : null}
+                  {balance.onHand <= 0 ? <small>หมดแล้ว</small> : balance.isLow ? <small>ใกล้หมด</small> : null}
                 </span>
                 <div
                   className="stock-bar-track"

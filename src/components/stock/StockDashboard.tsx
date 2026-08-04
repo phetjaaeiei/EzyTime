@@ -48,7 +48,8 @@ export default function StockDashboard() {
   );
   const archivedCount = balances.length - activeBalances.length;
   const daily = useMemo(() => computeDailyStats(movements, selectedDate), [movements, selectedDate]);
-  const lowItems = useMemo(() => findLowStockItems(activeBalances), [activeBalances]);
+  const outOfStockItems = useMemo(() => activeBalances.filter((balance) => balance.onHand <= 0), [activeBalances]);
+  const lowItems = useMemo(() => findLowStockItems(activeBalances).filter((balance) => balance.onHand > 0), [activeBalances]);
   const visibleMovementCount = useMemo(
     () => movements.filter((movement) => !isOpeningBalanceMovement(movement)).length,
     [movements],
@@ -108,6 +109,12 @@ export default function StockDashboard() {
         <div className="low-alert" role="status">
           <AlertTriangle size={18} />
           <span>ของใกล้หมด {lowItems.length} รายการ: {lowItems.map((b) => b.item.name).join(", ")}</span>
+        </div>
+      ) : null}
+      {outOfStockItems.length ? (
+        <div className="low-alert out-of-stock-alert" role="status">
+          <AlertTriangle size={18} />
+          <span>สินค้าหมด {outOfStockItems.length} รายการ: {outOfStockItems.map((b) => b.item.name).join(", ")}</span>
         </div>
       ) : null}
 

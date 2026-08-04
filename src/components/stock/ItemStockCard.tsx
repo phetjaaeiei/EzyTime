@@ -19,7 +19,8 @@ export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, on
   const { item, received, withdrawn, waste, onHand, isLow } = balance;
   const fmt = (value: number) => `${formatQuantity(value)} ${item.unit}`;
   const archived = !item.is_active;
-  const className = `stock-card${isLow && !archived ? " is-low" : ""}${archived ? " is-archived" : ""}`;
+  const isOutOfStock = onHand <= 0;
+  const className = `stock-card${isLow && !archived ? " is-low" : ""}${isOutOfStock && !archived ? " is-out-of-stock" : ""}${archived ? " is-archived" : ""}`;
 
   return (
     <article className={className}>
@@ -31,8 +32,8 @@ export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, on
         </div>
         <div className="stock-card-head-actions">
           {isLow && !archived ? (
-            <span className="low-badge" title="ของใกล้หมด">
-              <AlertTriangle size={14} /> ใกล้หมด
+            <span className={isOutOfStock ? "low-badge is-out" : "low-badge"} title={isOutOfStock ? "สินค้าหมดแล้ว" : "ของใกล้หมด"}>
+              <AlertTriangle size={14} /> {isOutOfStock ? "หมดแล้ว" : "ใกล้หมด"}
             </span>
           ) : null}
           {onDelete ? (

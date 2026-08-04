@@ -145,5 +145,62 @@ create policy "Admins delete movements"
 on public.stock_movements for delete to authenticated
 using (public.is_admin());
 
+-- Expose only aggregate stock balances to employees, without revealing other users' movement history.
+create or replace function public.get_stock_item_balances()
+returns table (item_id uuid, on_hand numeric)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    item.id as item_id,
+    coalesce(sum(
+      case movement.type
+        when 'in' then movement.quantity
+        else -movement.quantity
+      end
+    ), 0)::numeric as on_hand
+  from public.stock_items item
+  left join public.stock_movements movement on movement.item_id = item.id
+  where item.is_active = true
+  group by item.id;
+$$;
+
+revoke all on function public.get_stock_item_balances() from public;
+grant execute on function public.get_stock_item_balances() to authenticated;
+
+-- Serialize withdrawals per item and reject any operation that would make stock negative.
+create or replace function public.prevent_negative_stock()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_on_hand numeric;
+begin
+  if new.type not in ('out', 'waste') then
+    return new;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(new.item_id::text, 0));
+  select coalesce(sum(case when type = 'in' then quantity else -quantity end), 0)
+  into current_on_hand
+  from public.stock_movements
+  where item_id = new.item_id;
+
+  if new.quantity > current_on_hand then
+    raise exception 'สินค้าเหลือไม่พอ มีคงเหลือ %', current_on_hand;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_negative_stock_before_insert on public.stock_movements;
+create trigger prevent_negative_stock_before_insert
+before insert on public.stock_movements
+for each row execute function public.prevent_negative_stock();
+
 -- After creating the admin user in Supabase Auth, paste that user's UUID here:
 -- insert into public.admin_users (user_id) values ('00000000-0000-0000-0000-000000000000');

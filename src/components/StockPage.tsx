@@ -7,7 +7,7 @@ import {
   signInWithGoogle,
 } from "../lib/store";
 import { isSupabaseConfigured } from "../lib/supabase";
-import { listItems, listMovements } from "../lib/stock";
+import { listItems, listMovements, listStockOnHand } from "../lib/stock";
 import { formatQuantity } from "../lib/stock.calc";
 import { useAsyncData } from "../lib/useAsyncData";
 import { formatTime } from "../lib/time";
@@ -58,14 +58,15 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
 
   const loadStock = useCallback(async () => {
-    const [items, mine] = await Promise.all([listItems(), listMovements({ mine: true })]);
-    return { items, movements: mine };
+    const [items, mine, onHandByItem] = await Promise.all([listItems(), listMovements({ mine: true }), listStockOnHand()]);
+    return { items, movements: mine, onHandByItem };
   }, []);
   const { data, loading, error, reload } = useAsyncData(loadStock, {
     items: [] as StockItem[],
     movements: [] as StockMovement[],
+    onHandByItem: {} as Record<string, number>,
   });
-  const { items, movements } = data;
+  const { items, movements, onHandByItem } = data;
 
   const itemGroups = useMemo(() => groupItemsByCategory(items), [items]);
   const todayMine = movements.filter((m) => new Date(m.created_at).toDateString() === new Date().toDateString());
@@ -83,7 +84,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
           <div className="employee-stock-section-heading">
             <div>
               <h2 id="employee-stock-catalog-heading">เลือกสินค้า</h2>
-              <p>สินค้าที่พร้อมให้เบิก {items.length} รายการ</p>
+              <p>สินค้าที่พร้อมให้เบิก {items.filter((item) => (onHandByItem[item.id] ?? 0) > 0).length} รายการ</p>
             </div>
             <span className="employee-stock-section-icon" aria-hidden="true"><Boxes size={20} /></span>
           </div>
@@ -101,17 +102,23 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
                       <span>{categoryItems.length} รายการ</span>
                     </div>
                     <ul className="emp-stock-list">
-                      {categoryItems.map((item) => (
-                        <li key={item.id}>
+                      {categoryItems.map((item) => {
+                        const onHand = onHandByItem[item.id] ?? 0;
+                        const isOutOfStock = onHand <= 0;
+                        return (
+                        <li key={item.id} className={isOutOfStock ? "is-out-of-stock" : undefined}>
                           <div>
                             <strong>{item.name}</strong>
-                            <span className="muted-copy">หน่วย: {item.unit}</span>
+                            <span className={isOutOfStock ? "stock-status-out" : "muted-copy"}>
+                              {isOutOfStock ? "หมดแล้ว" : `คงเหลือ ${formatQuantity(onHand)} ${item.unit}`}
+                            </span>
                           </div>
-                          <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)}>
-                            <PackageMinus size={17} /> เบิก
+                          <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)} disabled={isOutOfStock}>
+                            <PackageMinus size={17} /> {isOutOfStock ? "หมดแล้ว" : "เบิก"}
                           </button>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   </section>
                 );
@@ -152,6 +159,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
         <MovementDialog
           item={movingItem}
           allowedTypes={["out", "waste"]}
+          availableQuantity={onHandByItem[movingItem.id] ?? 0}
           onClose={() => setMovingItem(null)}
           onSaved={() => { setMovingItem(null); void reload(); }}
         />

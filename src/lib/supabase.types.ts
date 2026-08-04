@@ -95,7 +95,12 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_stock_item_balances: {
+        Args: Record<PropertyKey, never>;
+        Returns: Array<{ item_id: string; on_hand: number }>;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
