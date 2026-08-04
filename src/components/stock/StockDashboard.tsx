@@ -64,8 +64,8 @@ export default function StockDashboard() {
   );
 
   return (
-    <section className="admin-layout" aria-labelledby="stock-heading">
-      <div className="admin-heading-row">
+    <section className="admin-layout admin-dashboard-layout stock-dashboard-layout" aria-labelledby="stock-heading">
+      <div className="admin-heading-row admin-dashboard-heading stock-dashboard-heading">
         <div>
           <div className="eyebrow-row"><span className="status-dot" />สต๊อกสินค้า</div>
           <h1 id="stock-heading">คลังสินค้าร้านชาบู</h1>
