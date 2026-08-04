@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Loader2, Save, X } from "lucide-react";
 import type { NewStockItem, StockItem } from "../../types";
-import { createItem, updateItem } from "../../lib/stock";
+import { archiveItem, createItem, updateItem } from "../../lib/stock";
 
 interface Props {
   item?: StockItem;
@@ -30,8 +30,11 @@ export default function ItemFormDialog({ item, categorySuggestions, onClose, onS
       category: category.trim() || null,
       low_stock_threshold: threshold.trim() === "" ? null : Number(threshold),
     };
-    if (payload.low_stock_threshold !== null && Number.isNaN(payload.low_stock_threshold)) {
-      setError("จุดแจ้งเตือนต้องเป็นตัวเลข");
+    if (
+      payload.low_stock_threshold !== null &&
+      (Number.isNaN(payload.low_stock_threshold) || payload.low_stock_threshold < 0)
+    ) {
+      setError("จุดแจ้งเตือนต้องเป็นตัวเลขที่ไม่ติดลบ");
       return;
     }
     setError("");
@@ -42,6 +45,19 @@ export default function ItemFormDialog({ item, categorySuggestions, onClose, onS
       onSaved();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "บันทึกไม่สำเร็จ");
+      setSaving(false);
+    }
+  }
+
+  async function handleArchive() {
+    if (!item) return;
+    setError("");
+    setSaving(true);
+    try {
+      await archiveItem(item.id);
+      onSaved();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "ปิดการใช้งานไม่สำเร็จ");
       setSaving(false);
     }
   }
@@ -66,6 +82,11 @@ export default function ItemFormDialog({ item, categorySuggestions, onClose, onS
         <button className="primary-button" type="submit" disabled={saving}>
           {saving ? <Loader2 className="spin" size={18} /> : <Save size={18} />} บันทึก
         </button>
+        {item ? (
+          <button className="field-link-button" type="button" onClick={handleArchive} disabled={saving}>
+            ปิดการใช้งานสินค้านี้
+          </button>
+        ) : null}
       </form>
     </Dialog>
   );
