@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Loader2, Save, X } from "lucide-react";
 import type { NewStockItem, StockItem } from "../../types";
 import { archiveItem, createItem, updateItem } from "../../lib/stock";
@@ -93,9 +93,65 @@ export default function ItemFormDialog({ item, categorySuggestions, onClose, onS
 }
 
 export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Trap focus inside the dialog and close on Escape (WCAG modal behavior).
+  useEffect(() => {
+    const panel = panelRef.current;
+    const opener = document.activeElement as HTMLElement | null;
+    const openerIsOutside = !!opener && !panel?.contains(opener);
+
+    const focusable = () =>
+      Array.from(
+        panel?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => el.offsetParent !== null);
+
+    // Move focus into the dialog on open, unless an autoFocus target already did.
+    if (panel && !panel.contains(document.activeElement)) {
+      (focusable()[0] ?? panel).focus();
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (items.length === 0) {
+        event.preventDefault();
+        panel?.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === panel)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+      if (openerIsOutside) opener.focus();
+    };
+  }, []);
+
   return (
     <div className="dialog-backdrop" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <div className="dialog-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="dialog-panel" ref={panelRef} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="dialog-head">
           <h2>{title}</h2>
           <button className="icon-button" type="button" aria-label="ปิด" onClick={onClose}><X size={18} /></button>
