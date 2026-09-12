@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  FileSpreadsheet,
   Loader2,
   PackageSearch,
   Plus,
@@ -14,6 +15,7 @@ import type { ItemBalance, StockItem, StockMovement } from "../../types";
 import { isOpeningBalanceMovement, listItems, listMovements, updateItem } from "../../lib/stock";
 import { computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
 import { matchesStockSearch } from "../../lib/stock.search";
+import { exportStockExcel } from "../../lib/stock.export";
 import { useAsyncData } from "../../lib/useAsyncData";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
 import ItemStockCard from "./ItemStockCard";
@@ -111,6 +113,7 @@ export default function StockDashboard() {
           <button className="icon-text-button" type="button" aria-pressed={selecting} onClick={() => { setSelecting(value => !value); setSelectedIds([]); setDeleteMessage(""); }}><Trash2 size={17} /> {selecting ? "ยกเลิกการเลือก" : "เลือกลบสินค้า"}</button>
           <button className="icon-text-button" type="button" aria-expanded={showPermissions} onClick={() => setShowPermissions((value) => !value)}>สิทธิ์จัดการสต๊อก</button>
           <button className="icon-text-button" type="button" onClick={() => setEditing("new")}><Plus size={17} /> เพิ่มสินค้า</button>
+          <button className="icon-text-button" type="button" onClick={() => exportStockExcel(activeBalances)} disabled={!activeBalances.length}><FileSpreadsheet size={17} /> Export Excel</button>
           {archivedCount > 0 ? (
             <button
               className={showArchived ? "icon-text-button" : "icon-text-button quiet"}
