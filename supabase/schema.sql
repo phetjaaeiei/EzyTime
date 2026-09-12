@@ -302,8 +302,9 @@ drop policy if exists "Authenticated can read stock items" on public.stock_items
 create policy "Authenticated can read stock items" on public.stock_items for select to authenticated
 using (public.can_manage_stock_item(id));
 drop policy if exists "Users record their own withdrawals" on public.stock_movements;
-create policy "Users record their own withdrawals" on public.stock_movements for insert to authenticated
-with check (user_id = auth.uid() and (public.is_admin() or (type in ('out', 'waste') and public.can_manage_stock_item(item_id))));
+drop policy if exists "Users record their own stock movements" on public.stock_movements;
+create policy "Users record their own stock movements" on public.stock_movements for insert to authenticated
+with check (user_id = auth.uid() and (public.is_admin() or (type in ('in', 'out', 'waste') and public.can_manage_stock_item(item_id))));
 
 create or replace function public.get_stock_item_balances()
 returns table (item_id uuid, on_hand numeric)

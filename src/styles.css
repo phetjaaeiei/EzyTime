@@ -1574,6 +1574,10 @@ tbody tr:hover {
 .role-choice:hover:not(:disabled) { border-color: var(--primary-strong); }
 .role-choice.is-active { background: var(--primary-strong); border-color: var(--primary-strong); color: #fff; }
 .role-choice:disabled { opacity: .6; cursor: default; }
+.emp-stock-actions { display: flex; gap: 6px; flex-wrap: wrap; flex: 0 0 auto; }
+.stock-log-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.stock-log-controls .stock-search { flex: 1 1 240px; }
+.stock-log-list { max-height: none; }
 @media (max-width: 480px) {
   .stock-order-row { gap: .25rem; }
   .stock-order-number { display: none; }

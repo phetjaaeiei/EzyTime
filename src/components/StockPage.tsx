@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Boxes, History, Loader2, LogIn, PackageMinus, Search } from "lucide-react";
+import { Boxes, History, Loader2, LogIn, Package, Pencil, Search } from "lucide-react";
 import type { EmployeeSession, StockItem, StockMovement } from "../types";
 import {
   getEmployeeSession,
@@ -17,6 +17,9 @@ import StockOrderEditor from "./stock/StockOrderEditor";
 import { useStockOrder } from "../lib/useStockOrder";
 import { groupByCategoryOrdered } from "../lib/stock.layout";
 import MovementDialog from "./stock/MovementDialog";
+import SetOnHandDialog from "./stock/SetOnHandDialog";
+
+const MOVEMENT_LABEL: Record<StockMovement["type"], string> = { in: "รับเข้า", out: "เบิก", waste: "ของเสีย" };
 
 export default function StockPage() {
   if (!isSupabaseConfigured) return <StockWithdrawUI demo />;
@@ -62,6 +65,7 @@ function SignInPanel() {
 function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   const layout = useStockOrder();
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
+  const [balanceItem, setBalanceItem] = useState<StockItem | null>(null);
   const [query, setQuery] = useState("");
 
   const loadStock = useCallback(async () => {
@@ -91,9 +95,9 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   return (
     <section className="clock-layout employee-stock-layout" aria-labelledby="emp-stock-heading">
       <div className="clock-hero employee-stock-hero">
-        <div className="eyebrow-row"><span className="status-dot" />{demo ? "โหมดทดลอง" : "เบิกของ"}</div>
+        <div className="eyebrow-row"><span className="status-dot" />{demo ? "โหมดทดลอง" : "จัดการสต๊อก"}</div>
         <h1 id="emp-stock-heading">เช็ค stock</h1>
-        <p className="lead-copy">เบิกและบันทึกของเสียเฉพาะสินค้าที่ admin มอบหมายให้ตำแหน่งของคุณ</p>
+        <p className="lead-copy">รับเข้า เบิกออก บันทึกของเสีย และแก้ยอดคงเหลือ เฉพาะสินค้าที่ admin มอบหมายให้ตำแหน่งของคุณ (ลบสินค้าได้เฉพาะ admin)</p>
         {access ? <p className="muted-copy">{access.isAdmin ? "Admin · จัดการได้ทุกรายการ" : access.position ? `ตำแหน่ง: ${access.position}` : "ยังไม่ได้รับมอบหมายตำแหน่งสำหรับสต๊อก"}{demo ? " · ทดลองในนามมะลิ" : ""}</p> : null}
       </div>
 
@@ -101,12 +105,10 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
         <section className="form-panel employee-stock-catalog" aria-labelledby="employee-stock-catalog-heading">
           <div className="employee-stock-section-heading">
             <div>
-              <h2 id="employee-stock-catalog-heading">เลือกสินค้า</h2>
-              <p>
-                สินค้าที่พร้อมให้เบิก {onHandByItem
-                  ? items.filter((item) => (onHandByItem[item.id] ?? 0) > 0).length
-                  : items.length} รายการ
-              </p>
+              <h2 id="employee-stock-catalog-heading">จัดการสต๊อก</h2>
+              <p>จัดการได้ {items.length} รายการ · พร้อมเบิก {onHandByItem
+                ? items.filter((item) => (onHandByItem[item.id] ?? 0) > 0).length
+                : items.length} รายการ</p>
             </div>
             <span className="employee-stock-section-icon" aria-hidden="true"><Boxes size={20} /></span>
           </div>
@@ -152,9 +154,14 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
                                   : `หน่วย: ${item.unit}`}
                             </span>
                           </div>
-                          <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)} disabled={isOutOfStock}>
-                            <PackageMinus size={17} /> {isOutOfStock ? "หมดแล้ว" : "เบิก"}
-                          </button>
+                          <div className="emp-stock-actions">
+                            <button className="icon-text-button" type="button" onClick={() => setMovingItem(item)}>
+                              <Package size={17} /> บันทึก
+                            </button>
+                            <button className="icon-text-button quiet" type="button" onClick={() => setBalanceItem(item)}>
+                              <Pencil size={16} /> แก้ยอด
+                            </button>
+                          </div>
                         </li>
                         );
                       })}
@@ -173,7 +180,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
         <section className="form-panel employee-stock-history" aria-labelledby="employee-stock-history-heading">
           <div className="employee-stock-section-heading">
             <div>
-              <h2 id="employee-stock-history-heading">ที่ฉันเบิกวันนี้</h2>
+              <h2 id="employee-stock-history-heading">ที่ฉันทำวันนี้</h2>
               <p>{todayMine.length ? `${todayMine.length} รายการล่าสุด` : "ยังไม่มีรายการวันนี้"}</p>
             </div>
             <span className="employee-stock-section-icon is-history" aria-hidden="true"><History size={20} /></span>
@@ -184,14 +191,14 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
                 const item = items.find((i) => i.id === m.item_id);
                 return (
                   <li key={m.id}>
-                    <div><strong>{item?.name ?? "—"}</strong><span>{formatQuantity(m.quantity)} {item?.unit ?? ""}</span></div>
+                    <div><strong>{item?.name ?? "—"}</strong><span>{MOVEMENT_LABEL[m.type]} {formatQuantity(m.quantity)} {item?.unit ?? ""}</span></div>
                     <time>{formatTime(m.created_at)} น.</time>
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <p className="employee-stock-history-empty">รายการที่เบิกจะมาแสดงตรงนี้</p>
+            <p className="employee-stock-history-empty">รายการที่คุณทำจะมาแสดงตรงนี้</p>
           )}
         </section>
       </div>
@@ -200,10 +207,18 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
         <MovementDialog
           item={movingItem}
           employeeMode
-          allowedTypes={["out", "waste"]}
+          allowedTypes={["in", "out", "waste"]}
           availableQuantity={onHandByItem?.[movingItem.id]}
           onClose={() => setMovingItem(null)}
           onSaved={() => { setMovingItem(null); void reload(); }}
+        />
+      ) : null}
+      {balanceItem ? (
+        <SetOnHandDialog
+          item={balanceItem}
+          currentOnHand={onHandByItem?.[balanceItem.id] ?? 0}
+          onClose={() => setBalanceItem(null)}
+          onSaved={() => { setBalanceItem(null); void reload(); }}
         />
       ) : null}
     </section>

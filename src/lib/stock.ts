@@ -232,6 +232,21 @@ export async function recordMovement(input: NewMovement): Promise<StockMovement>
   return movement;
 }
 
+// Append-only balance correction (used by employees, who may not delete/edit
+// movement history): reach the target on-hand with a single in/out entry.
+export function planOnHandAdjustment(current: number, target: number): { type: "in" | "out"; quantity: number } | null {
+  const diff = target - current;
+  if (Math.abs(diff) <= 1e-9) return null;
+  return diff > 0 ? { type: "in", quantity: diff } : { type: "out", quantity: -diff };
+}
+
+export async function adjustOnHandTo(itemId: string, currentOnHand: number, targetOnHand: number): Promise<void> {
+  if (!(targetOnHand >= 0)) throw new Error("ยอดคงเหลือต้องไม่ติดลบ");
+  const plan = planOnHandAdjustment(currentOnHand, targetOnHand);
+  if (!plan) return;
+  await recordMovement({ item_id: itemId, type: plan.type, quantity: plan.quantity, note: `ปรับยอดคงเหลือเป็น ${targetOnHand}` });
+}
+
 export async function setStockBalanceTotals(
   balance: ItemBalance,
   targetReceived: number,

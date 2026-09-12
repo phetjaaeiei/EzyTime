@@ -24,6 +24,7 @@ import {
 import type { AuthSession, SummaryRow, TimeLog } from "../types";
 import StockDashboard from "./stock/StockDashboard";
 import StockOverview from "./stock/StockOverview";
+import StockLog from "./stock/StockLog";
 import RoleManagementPanel from "./RoleManagementPanel";
 import { staffRoleLabel } from "../lib/roles";
 import {
@@ -79,7 +80,7 @@ export default function AdminDashboard() {
   return <AdminConsole session={session} onSignedOut={() => setSession(null)} />;
 }
 
-type AdminModule = "attendance" | "stock" | "overview" | "roles";
+type AdminModule = "attendance" | "stock" | "overview" | "log" | "roles";
 
 function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSignedOut: () => void }) {
   const [module, setModule] = useState<AdminModule>("attendance");
@@ -104,7 +105,7 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
     onSignedOut();
   }
 
-  const currentLabel = module === "attendance" ? "Dashboard" : module === "stock" ? "สต๊อกสินค้า" : module === "overview" ? "ภาพรวมสต๊อก" : "สิทธิ์ทีมงาน";
+  const currentLabel = module === "attendance" ? "Dashboard" : module === "stock" ? "สต๊อกสินค้า" : module === "overview" ? "ภาพรวมสต๊อก" : module === "log" ? "บันทึกการทำสต๊อก" : "สิทธิ์ทีมงาน";
 
   return (
     <div className="admin-shell">
@@ -148,6 +149,15 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
             <BarChart3 size={19} />
             <span><strong>ภาพรวมสต๊อก</strong><small>กราฟคงเหลือและสรุปรายวัน</small></span>
           </button>
+          <button
+            className={module === "log" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+            type="button"
+            onClick={() => selectModule("log")}
+            aria-current={module === "log" ? "page" : undefined}
+          >
+            <ClipboardList size={19} />
+            <span><strong>บันทึกการทำสต๊อก</strong><small>ใครทำอะไรกับสต๊อก</small></span>
+          </button>
           {session.role === "admin" ? (
             <button
               className={module === "roles" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
@@ -190,6 +200,7 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
         {module === "attendance" ? <Dashboard />
           : module === "stock" ? <StockDashboard />
           : module === "overview" ? <StockOverview />
+          : module === "log" ? <StockLog />
           : session.role === "admin" ? <RoleManagementPanel />
           : <Dashboard />}
       </div>
