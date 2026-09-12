@@ -9,6 +9,32 @@ export function applyStockOrder<T extends { id: string }>(items: T[], order: str
   }
   return [...result, ...byId.values()];
 }
+// Group items by category (Thai-sorted headers), then apply the personal order
+// WITHIN each category. Keeps categories visually separate instead of collapsing
+// everything into one flat "my order" list — one category's order can't affect another.
+export function groupByCategoryOrdered<T>(
+  items: T[],
+  order: string[],
+  getId: (item: T) => string,
+  getCategory: (item: T) => string | null | undefined,
+): [string, T[]][] {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = getCategory(item)?.trim() || 'ไม่ระบุหมวดหมู่';
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return Array.from(groups.entries())
+    .sort((first, second) => first[0].localeCompare(second[0], 'th-TH'))
+    .map(([category, groupItems]) => {
+      const byId = new Map(groupItems.map((item) => [getId(item), item]));
+      const ordered: T[] = [];
+      for (const id of order) {
+        const found = byId.get(id);
+        if (found) { ordered.push(found); byId.delete(id); }
+      }
+      return [category, [...ordered, ...byId.values()]];
+    });
+}
 export function moveStockItem(order: string[], activeId: string, overId: string): string[] {
   const from = order.indexOf(activeId), to = order.indexOf(overId);
   if (from < 0 || to < 0 || from === to) return order;

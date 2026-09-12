@@ -15,7 +15,7 @@ import { useAsyncData } from "../lib/useAsyncData";
 import { formatTime } from "../lib/time";
 import StockOrderEditor from "./stock/StockOrderEditor";
 import { useStockOrder } from "../lib/useStockOrder";
-import { applyStockOrder } from "../lib/stock.layout";
+import { groupByCategoryOrdered } from "../lib/stock.layout";
 import MovementDialog from "./stock/MovementDialog";
 
 export default function StockPage() {
@@ -82,7 +82,10 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
     () => (trimmedQuery ? items.filter((item) => matchesStockSearch(item, trimmedQuery)) : items),
     [items, trimmedQuery],
   );
-  const itemGroups = useMemo<[string, StockItem[]][]>(() => !filteredItems.length ? [] : layout.order.length ? [["ลำดับสินค้าของฉัน", applyStockOrder(filteredItems, layout.order)]] : groupItemsByCategory(filteredItems), [filteredItems, layout.order]);
+  const itemGroups = useMemo<[string, StockItem[]][]>(
+    () => groupByCategoryOrdered(filteredItems, layout.order, (item) => item.id, (item) => item.category),
+    [filteredItems, layout.order],
+  );
   const todayMine = movements.filter((m) => new Date(m.created_at).toDateString() === new Date().toDateString());
 
   return (
@@ -141,7 +144,6 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
                         <li key={item.id} className={isOutOfStock ? "is-out-of-stock" : undefined}>
                           <div>
                             <strong>{item.name}</strong>
-                            {layout.order.length && item.category ? <span className="muted-copy">{item.category}</span> : null}
                             <span className={isOutOfStock ? "stock-status-out" : "muted-copy"}>
                               {isOutOfStock
                                 ? "หมดแล้ว"
@@ -206,13 +208,4 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
       ) : null}
     </section>
   );
-}
-
-function groupItemsByCategory(items: StockItem[]): [string, StockItem[]][] {
-  const groups = new Map<string, StockItem[]>();
-  for (const item of items) {
-    const category = item.category?.trim() || "ไม่ระบุหมวดหมู่";
-    groups.set(category, [...(groups.get(category) ?? []), item]);
-  }
-  return Array.from(groups.entries()).sort(([first], [second]) => first.localeCompare(second, "th-TH"));
 }

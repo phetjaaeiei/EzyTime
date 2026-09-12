@@ -36,13 +36,13 @@ export default function App() {
       </a>
       <header className="topbar">
         {isEmployeeRoute ? (
-          <div className="brand-button" aria-label="EzyTime QR attendance">
+          <div className="brand-button" aria-label="Haekpak Shabu ระบบจัดการร้านชาบู">
             <span className="brand-mark" aria-hidden="true">
               <Clock3 size={20} strokeWidth={2.4} />
             </span>
             <span>
-              <span className="brand-name">EzyTime</span>
-              <span className="brand-caption">QR attendance</span>
+              <span className="brand-name">Haekpak Shabu</span>
+              <span className="brand-caption">ร้านชาบู</span>
             </span>
           </div>
         ) : (
@@ -51,8 +51,8 @@ export default function App() {
               <Clock3 size={20} strokeWidth={2.4} />
             </span>
             <span>
-              <span className="brand-name">EzyTime</span>
-              <span className="brand-caption">QR attendance</span>
+              <span className="brand-name">Haekpak Shabu</span>
+              <span className="brand-caption">ร้านชาบู</span>
             </span>
           </button>
         )}

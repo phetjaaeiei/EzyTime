@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  CalendarDays,
   Eye,
   EyeOff,
   Loader2,
@@ -13,7 +12,7 @@ import {
 } from "lucide-react";
 import type { ItemBalance, StockItem, StockMovement } from "../../types";
 import { isOpeningBalanceMovement, listItems, listMovements, updateItem } from "../../lib/stock";
-import { computeDailyStats, computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
+import { computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
 import { matchesStockSearch } from "../../lib/stock.search";
 import { useAsyncData } from "../../lib/useAsyncData";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
@@ -21,17 +20,15 @@ import ItemStockCard from "./ItemStockCard";
 import ItemFormDialog from "./ItemFormDialog";
 import DeleteItemDialog from "./DeleteItemDialog";
 import MovementDialog from "./MovementDialog";
-import StockOverviewChart from "./StockOverviewChart";
 import ClearHistoryDialog from "./ClearHistoryDialog";
 import StockOrderEditor from "./StockOrderEditor";
 import { useStockOrder } from "../../lib/useStockOrder";
-import { applyStockOrder } from "../../lib/stock.layout";
+import { groupByCategoryOrdered } from "../../lib/stock.layout";
 import StockPermissionsPanel from "./StockPermissionsPanel";
 
 export default function StockDashboard() {
   const layout = useStockOrder();
   const [showPermissions, setShowPermissions] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() => formatDateInput(new Date()));
   const [editing, setEditing] = useState<StockItem | null | "new">(null);
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
   const [deletingItems, setDeletingItems] = useState<StockItem[]>([]);
@@ -68,16 +65,18 @@ export default function StockDashboard() {
   function selectItem(id: string, checked: boolean) {
     setSelectedIds(current => checked ? [...new Set([...current, id])] : current.filter(value => value !== id));
   }
-  const daily = useMemo(() => computeDailyStats(movements, selectedDate), [movements, selectedDate]);
   const outOfStockItems = useMemo(() => activeBalances.filter((balance) => balance.onHand <= 0), [activeBalances]);
   const lowItems = useMemo(() => findLowStockItems(activeBalances).filter((balance) => balance.onHand > 0), [activeBalances]);
   const visibleMovementCount = useMemo(
     () => movements.filter((movement) => !isOpeningBalanceMovement(movement)).length,
     [movements],
   );
-  const grouped: [string, ItemBalance[]][] = layout.order.length
-    ? [["ลำดับสินค้าของฉัน", applyStockOrder(searchedBalances.map(balance => ({ ...balance, id: balance.item.id })), layout.order)]]
-    : groupByCategory(searchedBalances);
+  const grouped: [string, ItemBalance[]][] = groupByCategoryOrdered(
+    searchedBalances,
+    layout.order,
+    (balance) => balance.item.id,
+    (balance) => balance.item.category,
+  );
   const categories = useMemo(
     () => Array.from(new Set(items.map((item) => item.category?.trim()).filter((value): value is string => !!value)))
       .sort((first, second) => first.localeCompare(second, "th-TH")),
@@ -106,15 +105,11 @@ export default function StockDashboard() {
         <div>
           <div className="eyebrow-row"><span className="status-dot" />สต๊อกสินค้า</div>
           <h1 id="stock-heading">คลังสินค้าร้านชาบู</h1>
-          <p className="muted-copy">{formatThaiDate(selectedDate)}</p>
+          <p className="muted-copy">{formatThaiDate(formatDateInput(new Date()))}</p>
         </div>
         <div className="admin-actions">
           <button className="icon-text-button" type="button" aria-pressed={selecting} onClick={() => { setSelecting(value => !value); setSelectedIds([]); setDeleteMessage(""); }}><Trash2 size={17} /> {selecting ? "ยกเลิกการเลือก" : "เลือกลบสินค้า"}</button>
           <button className="icon-text-button" type="button" aria-expanded={showPermissions} onClick={() => setShowPermissions((value) => !value)}>สิทธิ์จัดการสต๊อก</button>
-          <label className="date-control">
-            <CalendarDays size={17} />
-            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} aria-label="เลือกวันที่" />
-          </label>
           <button className="icon-text-button" type="button" onClick={() => setEditing("new")}><Plus size={17} /> เพิ่มสินค้า</button>
           {archivedCount > 0 ? (
             <button
@@ -135,8 +130,6 @@ export default function StockDashboard() {
       </div>
 
       {showPermissions && !loading && !error ? <StockPermissionsPanel items={items} /> : null}
-
-      {activeBalances.length ? <StockOverviewChart balances={activeBalances} daily={daily} /> : null}
 
       {lowItems.length ? (
         <div className="low-alert" role="status">
@@ -297,13 +290,4 @@ function RecentMovements({ movements, items, onClear }: { movements: StockMoveme
 
 function TableSkeleton() {
   return <div className="skeleton-table" aria-label="กำลังโหลดข้อมูล">{Array.from({ length: 4 }).map((_, i) => <span key={i} />)}</div>;
-}
-
-function groupByCategory(balances: ItemBalance[]): [string, ItemBalance[]][] {
-  const groups = new Map<string, ItemBalance[]>();
-  for (const balance of balances) {
-    const key = balance.item.category ?? "ไม่ระบุหมวดหมู่";
-    groups.set(key, [...(groups.get(key) ?? []), balance]);
-  }
-  return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0], "th-TH"));
 }

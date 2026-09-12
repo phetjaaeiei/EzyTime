@@ -247,7 +247,7 @@ export function exportLogsCsv(rows: TimeLog[]): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `ezytime-${formatDateInput(new Date())}.csv`;
+  anchor.download = `haekpak-shabu-${formatDateInput(new Date())}.csv`;
   anchor.click();
   URL.revokeObjectURL(url);
 }

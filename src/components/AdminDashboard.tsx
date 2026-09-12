@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  BarChart3,
   Boxes,
   CalendarDays,
   CheckCircle2,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 import type { AuthSession, SummaryRow, TimeLog } from "../types";
 import StockDashboard from "./stock/StockDashboard";
+import StockOverview from "./stock/StockOverview";
 import {
   exportLogsCsv,
   fetchLogsByDate,
@@ -75,7 +77,7 @@ export default function AdminDashboard() {
   return <AdminConsole session={session} onSignedOut={() => setSession(null)} />;
 }
 
-type AdminModule = "attendance" | "stock";
+type AdminModule = "attendance" | "stock" | "overview";
 
 function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSignedOut: () => void }) {
   const [module, setModule] = useState<AdminModule>("attendance");
@@ -100,7 +102,7 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
     onSignedOut();
   }
 
-  const currentLabel = module === "attendance" ? "Dashboard" : "สต๊อกสินค้า";
+  const currentLabel = module === "attendance" ? "Dashboard" : module === "stock" ? "สต๊อกสินค้า" : "ภาพรวมสต๊อก";
 
   return (
     <div className="admin-shell">
@@ -135,6 +137,15 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
             <Boxes size={19} />
             <span><strong>สต๊อกสินค้า</strong><small>คงเหลือ รับเข้า และเบิกออก</small></span>
           </button>
+          <button
+            className={module === "overview" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+            type="button"
+            onClick={() => selectModule("overview")}
+            aria-current={module === "overview" ? "page" : undefined}
+          >
+            <BarChart3 size={19} />
+            <span><strong>ภาพรวมสต๊อก</strong><small>กราฟคงเหลือและสรุปรายวัน</small></span>
+          </button>
         </nav>
 
         <div className="admin-sidebar-account">
@@ -163,7 +174,7 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
           </button>
           <strong>{currentLabel}</strong>
         </div>
-        {module === "attendance" ? <Dashboard /> : <StockDashboard />}
+        {module === "attendance" ? <Dashboard /> : module === "stock" ? <StockDashboard /> : <StockOverview />}
       </div>
     </div>
   );

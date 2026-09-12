@@ -1558,6 +1558,12 @@ tbody tr:hover {
 .stock-drag-handle { touch-action: none; cursor: grab; flex-shrink: 0; }
 .stock-drag-handle:active { cursor: grabbing; }
 .stock-order-row > .icon-button { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+.stock-order-categories { display: grid; gap: 1rem; margin: 1rem 0; max-height: 32rem; overflow-y: auto; overscroll-behavior: contain; padding-right: .25rem; }
+.stock-order-category { display: grid; gap: .1rem; }
+.stock-order-category-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; position: sticky; top: 0; z-index: 1; background: var(--bg); padding: .4rem .25rem; border-bottom: 2px solid var(--border); }
+.stock-order-category-head h4 { margin: 0; font-size: .95rem; }
+.stock-order-category-head span { flex: 0 0 auto; border-radius: 999px; background: var(--surface); color: var(--muted); padding: 2px 9px; font-size: .72rem; font-weight: 700; }
+.stock-order-category .stock-order-list { max-height: none; overflow: visible; margin: .25rem 0 .35rem; }
 @media (max-width: 480px) {
   .stock-order-row { gap: .25rem; }
   .stock-order-number { display: none; }
