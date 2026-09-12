@@ -1,13 +1,18 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  BarChart3,
+  Boxes,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
   Copy,
   Download,
+  LayoutDashboard,
   Loader2,
+  LogIn,
   LogOut,
+  Menu,
   Printer,
   QrCode,
   RefreshCw,
@@ -15,15 +20,23 @@ import {
   Timer,
   UserRoundCheck,
   UsersRound,
+  X,
 } from "lucide-react";
 import type { AuthSession, SummaryRow, TimeLog } from "../types";
+import StockDashboard from "./stock/StockDashboard";
+import StockOverview from "./stock/StockOverview";
+import StockLog from "./stock/StockLog";
+import RoleManagementPanel from "./RoleManagementPanel";
+import { staffRoleLabel } from "../lib/roles";
 import {
   exportLogsCsv,
   fetchLogsByDate,
   getCurrentSession,
   getDefaultDate,
+  hasActiveSession,
   onAuthChange,
   signInAdmin,
+  signInWithGoogleAdmin,
   signOutCurrentUser,
 } from "../lib/store";
 import { isSupabaseConfigured } from "../lib/supabase";
@@ -40,19 +53,28 @@ type LoadState = "idle" | "loading" | "error";
 
 export default function AdminDashboard() {
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
+  const [signedInNoAccess, setSignedInNoAccess] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     getCurrentSession()
-      .then((currentSession) => {
-        if (isMounted) setSession(currentSession);
+      .then(async (currentSession) => {
+        if (currentSession) {
+          if (isMounted) { setSession(currentSession); setSignedInNoAccess(false); }
+          return;
+        }
+        const signedIn = await hasActiveSession();
+        if (isMounted) { setSession(null); setSignedInNoAccess(signedIn); }
       })
       .catch(() => {
         if (isMounted) setSession(null);
       });
 
-    const unsubscribe = onAuthChange(setSession);
+    const unsubscribe = onAuthChange((next, signedIn) => {
+      setSession(next);
+      setSignedInNoAccess(!next && signedIn);
+    });
     return () => {
       isMounted = false;
       unsubscribe();
@@ -64,17 +86,147 @@ export default function AdminDashboard() {
   }
 
   if (!session) {
-    return <LoginPanel onSignedIn={setSession} />;
+    return <LoginPanel onSignedIn={setSession} signedInNoAccess={signedInNoAccess} />;
   }
 
-  return <Dashboard session={session} onSignedOut={() => setSession(null)} />;
+  return <AdminConsole session={session} onSignedOut={() => setSession(null)} />;
 }
 
-function LoginPanel({ onSignedIn }: { onSignedIn: (session: AuthSession) => void }) {
+type AdminModule = "attendance" | "stock" | "overview" | "log" | "roles";
+
+function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSignedOut: () => void }) {
+  const [module, setModule] = useState<AdminModule>("attendance");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setSidebarOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
+
+  function selectModule(nextModule: AdminModule) {
+    setModule(nextModule);
+    setSidebarOpen(false);
+  }
+
+  async function handleSignOut() {
+    await signOutCurrentUser();
+    onSignedOut();
+  }
+
+  const currentLabel = module === "attendance" ? "Dashboard" : module === "stock" ? "สต๊อกสินค้า" : module === "overview" ? "ภาพรวมสต๊อก" : module === "log" ? "บันทึกการทำสต๊อก" : "สิทธิ์ทีมงาน";
+
+  return (
+    <div className="admin-shell">
+      <aside id="admin-sidebar" className={sidebarOpen ? "admin-sidebar is-open" : "admin-sidebar"}>
+        <div className="admin-sidebar-head">
+          <div>
+            <strong>Admin</strong>
+            <span>ระบบจัดการร้าน</span>
+          </div>
+          <button className="icon-button admin-sidebar-close" type="button" onClick={() => setSidebarOpen(false)} aria-label="ปิดเมนู">
+            <X size={18} />
+          </button>
+        </div>
+
+        <nav className="admin-sidebar-nav" aria-label="เมนูผู้ดูแลระบบ">
+          <span className="admin-sidebar-label">เมนูหลัก</span>
+          <button
+            className={module === "attendance" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+            type="button"
+            onClick={() => selectModule("attendance")}
+            aria-current={module === "attendance" ? "page" : undefined}
+          >
+            <LayoutDashboard size={19} />
+            <span><strong>Dashboard</strong><small>เวลาทำงานและการลงเวลา</small></span>
+          </button>
+          <button
+            className={module === "stock" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+            type="button"
+            onClick={() => selectModule("stock")}
+            aria-current={module === "stock" ? "page" : undefined}
+          >
+            <Boxes size={19} />
+            <span><strong>สต๊อกสินค้า</strong><small>คงเหลือ รับเข้า และเบิกออก</small></span>
+          </button>
+          <button
+            className={module === "overview" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+            type="button"
+            onClick={() => selectModule("overview")}
+            aria-current={module === "overview" ? "page" : undefined}
+          >
+            <BarChart3 size={19} />
+            <span><strong>ภาพรวมสต๊อก</strong><small>กราฟคงเหลือและสรุปรายวัน</small></span>
+          </button>
+          <button
+            className={module === "log" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+            type="button"
+            onClick={() => selectModule("log")}
+            aria-current={module === "log" ? "page" : undefined}
+          >
+            <ClipboardList size={19} />
+            <span><strong>บันทึกการทำสต๊อก</strong><small>ใครทำอะไรกับสต๊อก</small></span>
+          </button>
+          {session.role === "admin" ? (
+            <button
+              className={module === "roles" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+              type="button"
+              onClick={() => selectModule("roles")}
+              aria-current={module === "roles" ? "page" : undefined}
+            >
+              <UsersRound size={19} />
+              <span><strong>สิทธิ์ทีมงาน</strong><small>ตั้ง CEO / Manager</small></span>
+            </button>
+          ) : null}
+        </nav>
+
+        <div className="admin-sidebar-account">
+          <ShieldCheck size={18} aria-hidden="true" />
+          <span><small>{session.role ? staffRoleLabel(session.role) : "เข้าสู่ระบบเป็น"}</small><strong>{session.isDemo ? "โหมดทดลอง" : session.email}</strong></span>
+          {isSupabaseConfigured ? (
+            <button className="icon-button" type="button" onClick={handleSignOut} aria-label="ออกจากระบบ">
+              <LogOut size={18} />
+            </button>
+          ) : null}
+        </div>
+      </aside>
+
+      {sidebarOpen ? <button className="admin-sidebar-backdrop" type="button" onClick={() => setSidebarOpen(false)} aria-label="ปิดเมนู" /> : null}
+
+      <div className="admin-workspace">
+        <div className="admin-mobile-nav">
+          <button
+            className="icon-text-button"
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-controls="admin-sidebar"
+            aria-expanded={sidebarOpen}
+          >
+            <Menu size={18} /> เมนู
+          </button>
+          <strong>{currentLabel}</strong>
+        </div>
+        {module === "attendance" ? <Dashboard />
+          : module === "stock" ? <StockDashboard />
+          : module === "overview" ? <StockOverview />
+          : module === "log" ? <StockLog />
+          : session.role === "admin" ? <RoleManagementPanel />
+          : <Dashboard />}
+      </div>
+    </div>
+  );
+}
+
+function LoginPanel({ onSignedIn, signedInNoAccess }: { onSignedIn: (session: AuthSession) => void; signedInNoAccess: boolean }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,6 +243,26 @@ function LoginPanel({ onSignedIn }: { onSignedIn: (session: AuthSession) => void
     }
   }
 
+  async function handleGoogle() {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogleAdmin();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "เข้าสู่ระบบไม่สำเร็จ");
+      setGoogleLoading(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await signOutCurrentUser();
+    } finally {
+      window.location.reload();
+    }
+  }
+
   return (
     <section className="login-layout" aria-labelledby="login-heading">
       <div className="login-panel">
@@ -98,49 +270,68 @@ function LoginPanel({ onSignedIn }: { onSignedIn: (session: AuthSession) => void
           <ShieldCheck size={24} />
         </span>
         <h1 id="login-heading">Admin login</h1>
-        <p className="muted-copy">ใช้บัญชี admin ใน Supabase เพื่อดูข้อมูลรายวัน</p>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>อีเมล</span>
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="admin@example.com"
-              required
-            />
-          </label>
-          <label className="field">
-            <span>รหัสผ่าน</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="กรอกรหัสผ่าน"
-              required
-            />
-          </label>
+        {signedInNoAccess ? (
+          <>
+            <p className="muted-copy">บัญชีนี้เข้าสู่ระบบแล้ว แต่ยังไม่มีสิทธิ์เข้าหน้าผู้ดูแล — ให้ admin ตั้งสิทธิ์ CEO หรือ Manager ให้บัญชีนี้ก่อน แล้วเข้าใหม่อีกครั้ง</p>
+            {error ? <p className="form-error" role="alert">{error}</p> : null}
+            <button className="primary-button" type="button" onClick={handleSignOut} disabled={signingOut}>
+              {signingOut ? <Loader2 className="spin" size={18} /> : <LogOut size={18} />} ออกจากระบบ
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="muted-copy">ผู้ดูแล / CEO / Manager เข้าสู่ระบบเพื่อจัดการร้าน</p>
 
-          {error ? (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          ) : null}
+            <button className="primary-button" type="button" onClick={handleGoogle} disabled={googleLoading}>
+              {googleLoading ? <Loader2 className="spin" size={18} /> : <LogIn size={18} />} เข้าสู่ระบบด้วย Google
+            </button>
 
-          <button className="primary-button" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
-            เข้าหน้า admin
-          </button>
-        </form>
+            <p className="muted-copy login-or">หรือใช้อีเมลผู้ดูแล</p>
+
+            <form className="login-form" onSubmit={handleSubmit}>
+              <label className="field">
+                <span>อีเมล</span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="admin@example.com"
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>รหัสผ่าน</span>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="กรอกรหัสผ่าน"
+                  required
+                />
+              </label>
+
+              {error ? (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
+
+              <button className="icon-text-button login-email-submit" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
+                เข้าหน้า admin
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </section>
   );
 }
 
-function Dashboard({ session, onSignedOut }: { session: AuthSession; onSignedOut: () => void }) {
+function Dashboard() {
   const [selectedDate, setSelectedDate] = useState(getDefaultDate);
   const [logs, setLogs] = useState<TimeLog[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
@@ -197,18 +388,13 @@ function Dashboard({ session, onSignedOut }: { session: AuthSession; onSignedOut
     }
   }
 
-  async function handleSignOut() {
-    await signOutCurrentUser();
-    onSignedOut();
-  }
-
   return (
-    <section className="admin-layout" aria-labelledby="admin-heading">
-      <div className="admin-heading-row">
+    <section className="admin-layout admin-dashboard-layout" aria-labelledby="admin-heading">
+      <div className="admin-heading-row admin-dashboard-heading">
         <div>
           <div className="eyebrow-row">
             <span className="status-dot" />
-            {session.isDemo ? "โหมดทดลองบนเครื่อง" : session.email}
+            Dashboard
           </div>
           <h1 id="admin-heading">สรุปเวลารายวัน</h1>
           <p className="muted-copy">{formatThaiDate(selectedDate)}</p>
@@ -232,25 +418,55 @@ function Dashboard({ session, onSignedOut }: { session: AuthSession; onSignedOut
             {loadState === "loading" ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
           </button>
-          {isSupabaseConfigured ? (
-            <button className="icon-button" type="button" onClick={handleSignOut} aria-label="ออกจากระบบ">
-              <LogOut size={18} />
-            </button>
-          ) : null}
         </div>
       </div>
 
+      <div className="stat-grid" aria-label="ภาพรวมรายวัน">
+        <StatCard icon={<UsersRound size={20} />} label="พนักงานวันนี้" value={`${summaryRows.length} คน`} />
+        <StatCard icon={<UserRoundCheck size={20} />} label="บันทึกครบ" value={`${completeCount} คน`} />
+        <StatCard icon={<ClipboardList size={20} />} label="รอออกงาน" value={`${missingOutCount} คน`} />
+        <StatCard icon={<Timer size={20} />} label="รวมเวลาทำงาน" value={formatDuration(totalMinutes)} />
+      </div>
+
       <div className="dashboard-grid">
+        <section className="table-panel" aria-labelledby="table-heading">
+          <div className="section-heading-row">
+            <div>
+              <h2 id="table-heading">ตารางสรุป</h2>
+              <p className="muted-copy">ชื่อ ตำแหน่ง เวลาเข้า เวลาออก และเวลาทำงานทั้งหมด</p>
+            </div>
+            <button className="icon-text-button" type="button" onClick={() => exportLogsCsv(logs)} disabled={!logs.length}>
+              <Download size={17} />
+              Export CSV
+            </button>
+          </div>
+
+          {loadState === "error" ? (
+            <div className="inline-error" role="alert">
+              {error}
+            </div>
+          ) : loadState === "loading" ? (
+            <TableSkeleton />
+          ) : summaryRows.length ? (
+            <SummaryTable rows={summaryRows} />
+          ) : (
+            <EmptyState />
+          )}
+        </section>
+
         <aside className="qr-panel" aria-labelledby="qr-heading">
           <div className="panel-title">
+            <div>
+              <h2 id="qr-heading">QR สำหรับพนักงาน</h2>
+              <p>ใช้สำหรับเปิดหน้าลงเวลา</p>
+            </div>
             <QrCode size={19} />
-            <h2 id="qr-heading">QR สำหรับพนักงาน</h2>
           </div>
           <div className="qr-box">
-            <QRCodeSVG value={clockUrl} size={180} marginSize={2} />
+            <QRCodeSVG value={clockUrl} size={150} marginSize={2} />
           </div>
           <div className="qr-link">{clockUrl}</div>
-          <div className="button-row">
+          <div className="button-row qr-actions">
             <button className="icon-text-button" type="button" onClick={handleCopy}>
               {copied ? <CheckCircle2 size={17} /> : <Copy size={17} />}
               {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
@@ -261,40 +477,6 @@ function Dashboard({ session, onSignedOut }: { session: AuthSession; onSignedOut
             </button>
           </div>
         </aside>
-
-        <div className="summary-area">
-          <div className="stat-grid" aria-label="ภาพรวมรายวัน">
-            <StatCard icon={<UsersRound size={20} />} label="พนักงานวันนี้" value={`${summaryRows.length} คน`} />
-            <StatCard icon={<UserRoundCheck size={20} />} label="บันทึกครบ" value={`${completeCount} คน`} />
-            <StatCard icon={<ClipboardList size={20} />} label="รอออกงาน" value={`${missingOutCount} คน`} />
-            <StatCard icon={<Timer size={20} />} label="รวมเวลาทำงาน" value={formatDuration(totalMinutes)} />
-          </div>
-
-          <section className="table-panel" aria-labelledby="table-heading">
-            <div className="section-heading-row">
-              <div>
-                <h2 id="table-heading">ตารางสรุป</h2>
-                <p className="muted-copy">ชื่อ ตำแหน่ง เวลาเข้า เวลาออก และเวลาทำงานทั้งหมด</p>
-              </div>
-              <button className="icon-text-button" type="button" onClick={() => exportLogsCsv(logs)} disabled={!logs.length}>
-                <Download size={17} />
-                Export CSV
-              </button>
-            </div>
-
-            {loadState === "error" ? (
-              <div className="inline-error" role="alert">
-                {error}
-              </div>
-            ) : loadState === "loading" ? (
-              <TableSkeleton />
-            ) : summaryRows.length ? (
-              <SummaryTable rows={summaryRows} />
-            ) : (
-              <EmptyState />
-            )}
-          </section>
-        </div>
       </div>
 
       <section className="activity-panel" aria-labelledby="activity-heading">

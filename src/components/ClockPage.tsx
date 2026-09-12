@@ -16,7 +16,6 @@ import {
   getEmployeeSession,
   onEmployeeAuthChange,
   signInWithGoogle,
-  signOutCurrentUser,
   updateEmployeeNickname,
 } from "../lib/store";
 import { isSupabaseConfigured } from "../lib/supabase";
@@ -34,7 +33,6 @@ export default function ClockPage() {
 
 function GoogleClockFlow() {
   const [session, setSession] = useState<EmployeeSession | null | undefined>(undefined);
-  const [isEditingNickname, setIsEditingNickname] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -58,20 +56,18 @@ function GoogleClockFlow() {
   if (!session) return <GoogleSignInPanel />;
 
   const viewState = getClockViewState(true, session.nickname);
-  if (viewState === "needs-nickname" || isEditingNickname) {
+  if (viewState === "needs-nickname") {
     return (
       <NicknameForm
         initialValue={session.nickname ?? ""}
         onSaved={(nickname) => {
           setSession({ ...session, nickname });
-          setIsEditingNickname(false);
         }}
-        onCancel={isEditingNickname ? () => setIsEditingNickname(false) : undefined}
       />
     );
   }
 
-  return <EmployeeClockForm session={session} onRequestEditNickname={() => setIsEditingNickname(true)} />;
+  return <EmployeeClockForm session={session} />;
 }
 
 function GoogleSignInPanel() {
@@ -90,8 +86,8 @@ function GoogleSignInPanel() {
   }
 
   return (
-    <section className="clock-layout" aria-labelledby="clock-signin-heading">
-      <div className="form-panel">
+    <section className="clock-layout employee-auth-layout" aria-labelledby="clock-signin-heading">
+      <div className="form-panel employee-auth-card">
         <span className="panel-icon" aria-hidden="true">
           <UserRound size={24} />
         </span>
@@ -116,11 +112,9 @@ function GoogleSignInPanel() {
 function NicknameForm({
   initialValue,
   onSaved,
-  onCancel,
 }: {
   initialValue: string;
   onSaved: (nickname: string) => void;
-  onCancel?: () => void;
 }) {
   const [nickname, setNickname] = useState(initialValue);
   const [error, setError] = useState("");
@@ -181,11 +175,6 @@ function NicknameForm({
             บันทึกชื่อเล่น
           </button>
 
-          {onCancel ? (
-            <button className="field-link-button" type="button" onClick={onCancel}>
-              ยกเลิก
-            </button>
-          ) : null}
         </form>
       </div>
     </section>
@@ -194,10 +183,8 @@ function NicknameForm({
 
 function EmployeeClockForm({
   session,
-  onRequestEditNickname,
 }: {
   session: EmployeeSession;
-  onRequestEditNickname: () => void;
 }) {
   const [eventType, setEventType] = useState<EventType>("clock_in");
   const [position, setPosition] = useState<Position>(defaultPosition);
@@ -248,13 +235,9 @@ function EmployeeClockForm({
     setError("");
   }
 
-  async function handleSignOut() {
-    await signOutCurrentUser();
-  }
-
   return (
-    <section className="clock-layout" aria-labelledby="clock-heading">
-      <div className="clock-hero">
+    <section className="clock-layout employee-clock-layout" aria-labelledby="clock-heading">
+      <div className="clock-hero employee-clock-hero">
         <div className="eyebrow-row">
           <span className="status-dot" />
           สวัสดี {nickname}
@@ -274,17 +257,10 @@ function EmployeeClockForm({
           </button>
         </div>
 
-        <div className="button-row">
-          <button className="field-link-button" type="button" onClick={onRequestEditNickname}>
-            แก้ไขชื่อ
-          </button>
-          <button className="field-link-button" type="button" onClick={handleSignOut}>
-            ออกจากระบบ
-          </button>
-        </div>
       </div>
 
-      <div className="form-panel">
+      <div className="form-panel employee-clock-form-panel">
+        {!savedLog ? <ClockFormHeading /> : null}
         {savedLog ? (
           <div className="success-state" role="status" aria-live="polite">
             <CheckCircle2 size={42} />
@@ -357,6 +333,18 @@ function EmployeeClockForm({
   );
 }
 
+function ClockFormHeading() {
+  return (
+    <div className="employee-clock-form-heading">
+      <div>
+        <h2>รายละเอียดการลงเวลา</h2>
+        <p>เลือกประเภทเวลาและตำแหน่งงาน</p>
+      </div>
+      <span aria-hidden="true"><BriefcaseBusiness size={20} /></span>
+    </div>
+  );
+}
+
 function ClockSkeleton() {
   return (
     <section className="clock-layout" aria-label="กำลังโหลด">
@@ -422,8 +410,8 @@ function DemoClockForm() {
   }
 
   return (
-    <section className="clock-layout" aria-labelledby="clock-heading">
-      <div className="clock-hero">
+    <section className="clock-layout employee-clock-layout" aria-labelledby="clock-heading">
+      <div className="clock-hero employee-clock-hero">
         <div className="eyebrow-row">
           <span className="status-dot" />
           เวลาจาก QR (โหมดทดลอง)
@@ -444,7 +432,8 @@ function DemoClockForm() {
         </div>
       </div>
 
-      <div className="form-panel">
+      <div className="form-panel employee-clock-form-panel">
+        {!savedLog ? <ClockFormHeading /> : null}
         {savedLog ? (
           <div className="success-state" role="status" aria-live="polite">
             <CheckCircle2 size={42} />
