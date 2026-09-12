@@ -12,6 +12,9 @@ import { getEmployeeStockAccess, type EmployeeStockAccess } from "../lib/stock.p
 import { formatQuantity } from "../lib/stock.calc";
 import { useAsyncData } from "../lib/useAsyncData";
 import { formatTime } from "../lib/time";
+import StockOrderEditor from "./stock/StockOrderEditor";
+import { useStockOrder } from "../lib/useStockOrder";
+import { applyStockOrder } from "../lib/stock.layout";
 import MovementDialog from "./stock/MovementDialog";
 
 export default function StockPage() {
@@ -56,6 +59,7 @@ function SignInPanel() {
 }
 
 function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
+  const layout = useStockOrder();
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
 
   const loadStock = useCallback(async () => {
@@ -71,7 +75,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   });
   const { items, movements, onHandByItem, access } = data;
 
-  const itemGroups = useMemo(() => groupItemsByCategory(items), [items]);
+  const itemGroups = useMemo<[string, StockItem[]][]>(() => !items.length ? [] : layout.order.length ? [["ลำดับสินค้าของฉัน", applyStockOrder(items, layout.order)]] : groupItemsByCategory(items), [items, layout.order]);
   const todayMine = movements.filter((m) => new Date(m.created_at).toDateString() === new Date().toDateString());
 
   return (
@@ -97,6 +101,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
             <span className="employee-stock-section-icon" aria-hidden="true"><Boxes size={20} /></span>
           </div>
           {error ? <div role="alert"><p className="form-error">{error}</p><button className="icon-text-button" onClick={reload}>ลองโหลดสินค้าอีกครั้ง</button></div> : null}
+          {!loading && !error ? <StockOrderEditor items={items} {...layout} /> : null}
           {loading ? (
             <div className="skeleton-table">{Array.from({ length: 4 }).map((_, i) => <span key={i} />)}</div>
           ) : error ? null : itemGroups.length ? (
@@ -117,6 +122,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
                         <li key={item.id} className={isOutOfStock ? "is-out-of-stock" : undefined}>
                           <div>
                             <strong>{item.name}</strong>
+                            {layout.order.length && item.category ? <span className="muted-copy">{item.category}</span> : null}
                             <span className={isOutOfStock ? "stock-status-out" : "muted-copy"}>
                               {isOutOfStock
                                 ? "หมดแล้ว"

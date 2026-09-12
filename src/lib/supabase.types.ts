@@ -38,6 +38,11 @@ export interface Database {
         };
         Update: never;
       };
+      user_stock_layouts: {
+        Row: { user_id: string; item_ids: string[] };
+        Insert: { user_id: string; item_ids: string[] };
+        Update: { item_ids?: string[] };
+      };
       employee_stock_positions: {
         Row: { user_id: string; position: Position };
         Insert: { user_id: string; position: Position };
@@ -106,6 +111,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      delete_stock_items: {
+        Args: { target_item_ids: string[] };
+        Returns: number;
+      };
       list_stock_employees: {
         Args: Record<PropertyKey, never>;
         Returns: Array<{ user_id: string; display_name: string; email: string | null; position: Position | null }>;

@@ -351,3 +351,23 @@ export async function clearMovementHistory(balances: ItemBalance[]): Promise<voi
   }));
   writeLocal(MOVES_KEY, localOpeningBalances);
 }
+
+/** Permanently delete selected products and their movement history. */
+export async function deleteStockItems(itemIds: string[]): Promise<number> {
+  const ids = [...new Set(itemIds)];
+  if (!ids.length) throw new Error("กรุณาเลือกสินค้าที่ต้องการลบ");
+  if (supabase) {
+    const { data, error } = await supabase.rpc("delete_stock_items", { target_item_ids: ids });
+    if (error) throw new Error(error.message);
+    return Number(data);
+  }
+  const items = readLocal(ITEMS_KEY, demoItems);
+  if (ids.some(id => !items.some(item => item.id === id))) throw new Error("บางสินค้าถูกลบไปแล้ว กรุณารีเฟรชและเลือกใหม่");
+  const movements = readLocal(MOVES_KEY, demoMovements);
+  writeLocal(MOVES_KEY, movements.filter(move => !ids.includes(move.item_id)));
+  writeLocal(ITEMS_KEY, items.filter(item => !ids.includes(item.id)));
+  const permissionsKey = "ezytime.stock.permissions.v1";
+  const permissions = readLocal<Record<string, string[]>>(permissionsKey, {});
+  writeLocal(permissionsKey, Object.fromEntries(Object.entries(permissions).map(([position, granted]) => [position, granted.filter(id => !ids.includes(id))])));
+  return ids.length;
+}

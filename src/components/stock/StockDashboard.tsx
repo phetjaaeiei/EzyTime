@@ -21,14 +21,21 @@ import DeleteItemDialog from "./DeleteItemDialog";
 import MovementDialog from "./MovementDialog";
 import StockOverviewChart from "./StockOverviewChart";
 import ClearHistoryDialog from "./ClearHistoryDialog";
+import StockOrderEditor from "./StockOrderEditor";
+import { useStockOrder } from "../../lib/useStockOrder";
+import { applyStockOrder } from "../../lib/stock.layout";
 import StockPermissionsPanel from "./StockPermissionsPanel";
 
 export default function StockDashboard() {
+  const layout = useStockOrder();
   const [showPermissions, setShowPermissions] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => formatDateInput(new Date()));
   const [editing, setEditing] = useState<StockItem | null | "new">(null);
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
-  const [deletingItem, setDeletingItem] = useState<StockItem | null>(null);
+  const [deletingItems, setDeletingItems] = useState<StockItem[]>([]);
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteMessage, setDeleteMessage] = useState("");
   const [clearingHistory, setClearingHistory] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -49,6 +56,10 @@ export default function StockDashboard() {
     [showArchived, balances, activeBalances],
   );
   const archivedCount = balances.length - activeBalances.length;
+  const selectedItems = visibleBalances.filter(balance => selectedIds.includes(balance.item.id)).map(balance => balance.item);
+  function selectItem(id: string, checked: boolean) {
+    setSelectedIds(current => checked ? [...new Set([...current, id])] : current.filter(value => value !== id));
+  }
   const daily = useMemo(() => computeDailyStats(movements, selectedDate), [movements, selectedDate]);
   const outOfStockItems = useMemo(() => activeBalances.filter((balance) => balance.onHand <= 0), [activeBalances]);
   const lowItems = useMemo(() => findLowStockItems(activeBalances).filter((balance) => balance.onHand > 0), [activeBalances]);
@@ -56,7 +67,9 @@ export default function StockDashboard() {
     () => movements.filter((movement) => !isOpeningBalanceMovement(movement)).length,
     [movements],
   );
-  const grouped = useMemo(() => groupByCategory(visibleBalances), [visibleBalances]);
+  const grouped: [string, ItemBalance[]][] = layout.order.length
+    ? [["ลำดับสินค้าของฉัน", applyStockOrder(visibleBalances.map(balance => ({ ...balance, id: balance.item.id })), layout.order)]]
+    : groupByCategory(visibleBalances);
   const categories = useMemo(
     () => Array.from(new Set(items.map((item) => item.category?.trim()).filter((value): value is string => !!value)))
       .sort((first, second) => first.localeCompare(second, "th-TH")),
@@ -88,6 +101,7 @@ export default function StockDashboard() {
           <p className="muted-copy">{formatThaiDate(selectedDate)}</p>
         </div>
         <div className="admin-actions">
+          <button className="icon-text-button" type="button" aria-pressed={selecting} onClick={() => { setSelecting(value => !value); setSelectedIds([]); setDeleteMessage(""); }}><Trash2 size={17} /> {selecting ? "ยกเลิกการเลือก" : "เลือกลบสินค้า"}</button>
           <button className="icon-text-button" type="button" aria-expanded={showPermissions} onClick={() => setShowPermissions((value) => !value)}>สิทธิ์จัดการสต๊อก</button>
           <label className="date-control">
             <CalendarDays size={17} />
@@ -98,7 +112,7 @@ export default function StockDashboard() {
             <button
               className={showArchived ? "icon-text-button" : "icon-text-button quiet"}
               type="button"
-              onClick={() => setShowArchived((v) => !v)}
+              onClick={() => { setShowArchived((v) => !v); setSelectedIds([]); }}
               aria-pressed={showArchived}
             >
               {showArchived ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -129,6 +143,17 @@ export default function StockDashboard() {
         </div>
       ) : null}
 
+      {deleteMessage ? <p role="status">{deleteMessage}</p> : null}
+      {selecting && !loading && !error ? (
+        <section className="stock-bulk-toolbar" aria-label="ลบสินค้าที่เลือก">
+          <strong>เลือก {selectedItems.length} จาก {visibleBalances.length} รายการที่แสดง</strong>
+          <button type="button" className="icon-text-button" onClick={() => setSelectedIds(visibleBalances.map(balance => balance.item.id))}>เลือกทั้งหมดที่แสดง</button>
+          <button type="button" className="icon-text-button quiet" onClick={() => setSelectedIds([])}>ล้างการเลือก</button>
+          <button type="button" className="danger-button" disabled={!selectedItems.length} onClick={() => setDeletingItems(selectedItems)}><Trash2 size={17} /> ลบถาวร {selectedItems.length} รายการ</button>
+        </section>
+      ) : null}
+      {!selecting && !loading && !error ? <StockOrderEditor items={visibleBalances.map(balance => balance.item)} {...layout} /> : null}
+
       {error ? (
         <div className="inline-error" role="alert">{error}</div>
       ) : loading ? (
@@ -143,15 +168,20 @@ export default function StockDashboard() {
                   <ItemStockCard
                     key={balance.item.id}
                     balance={balance}
+                    selected={selectedIds.includes(balance.item.id)}
+                    onSelect={selecting ? checked => selectItem(balance.item.id, checked) : undefined}
                     onEdit={() => setEditing(balance.item)}
                     onRecord={() => setMovingItem(balance.item)}
-                    onDelete={() => setDeletingItem(balance.item)}
+                    onDelete={selecting ? undefined : () => setDeletingItems([balance.item])}
                   />
                 ) : (
                   <ItemStockCard
                     key={balance.item.id}
                     balance={balance}
                     onRestore={() => void handleRestore(balance.item)}
+                    selected={selectedIds.includes(balance.item.id)}
+                    onSelect={selecting ? checked => selectItem(balance.item.id, checked) : undefined}
+                    onDelete={selecting ? undefined : () => setDeletingItems([balance.item])}
                   />
                 ),
               )}
@@ -186,11 +216,12 @@ export default function StockDashboard() {
           onSaved={() => { setMovingItem(null); void reload(); }}
         />
       ) : null}
-      {deletingItem ? (
+      {deletingItems.length ? (
         <DeleteItemDialog
-          item={deletingItem}
-          onClose={() => setDeletingItem(null)}
-          onDeleted={() => { setDeletingItem(null); void reload(); }}
+          items={deletingItems}
+          movementCount={movements.filter(move => deletingItems.some(item => item.id === move.item_id)).length}
+          onClose={() => setDeletingItems([])}
+          onDeleted={() => { setDeleteMessage(`ลบสินค้า ${deletingItems.length} รายการพร้อมประวัติถาวรแล้ว`); setDeletingItems([]); setSelectedIds([]); setSelecting(false); void reload(); }}
         />
       ) : null}
       {clearingHistory ? (

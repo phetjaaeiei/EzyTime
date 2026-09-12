@@ -13,9 +13,11 @@ interface Props {
   onRecord?: () => void;
   onRestore?: () => void;
   onDelete?: () => void;
+  selected?: boolean;
+  onSelect?: (checked: boolean) => void;
 }
 
-export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, onDelete }: Props) {
+export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, onDelete, selected = false, onSelect }: Props) {
   const { item, received, withdrawn, waste, onHand, isLow } = balance;
   const fmt = (value: number) => `${formatQuantity(value)} ${item.unit}`;
   const archived = !item.is_active;
@@ -23,7 +25,8 @@ export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, on
   const className = `stock-card${isLow && !archived ? " is-low" : ""}${isOutOfStock && !archived ? " is-out-of-stock" : ""}${archived ? " is-archived" : ""}`;
 
   return (
-    <article className={className}>
+    <article className={`${className}${selected ? " is-selected" : ""}`}>
+      {onSelect ? <label className="stock-select-item"><input type="checkbox" checked={selected} onChange={event => onSelect(event.target.checked)} aria-label={`เลือกสินค้า ${item.name}`} /><span>เลือกเพื่อลบ</span></label> : null}
       <header className="stock-card-head">
         <div>
           <h3>{item.name}</h3>
@@ -41,8 +44,8 @@ export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, on
               className="icon-button stock-delete-button"
               type="button"
               onClick={onDelete}
-              aria-label={`ลบสินค้า ${item.name}`}
-              title="ลบสินค้า"
+              aria-label={`ลบสินค้า ${item.name} ถาวร`}
+              title="ลบสินค้าถาวร"
             >
               <Trash2 size={18} />
             </button>
