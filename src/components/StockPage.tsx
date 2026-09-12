@@ -92,7 +92,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
     <section className="clock-layout employee-stock-layout" aria-labelledby="emp-stock-heading">
       <div className="clock-hero employee-stock-hero">
         <div className="eyebrow-row"><span className="status-dot" />{demo ? "โหมดทดลอง" : "เบิกของ"}</div>
-        <h1 id="emp-stock-heading">เบิกของเข้าครัว</h1>
+        <h1 id="emp-stock-heading">เช็ค stock</h1>
         <p className="lead-copy">เบิกและบันทึกของเสียเฉพาะสินค้าที่ admin มอบหมายให้ตำแหน่งของคุณ</p>
         {access ? <p className="muted-copy">{access.isAdmin ? "Admin · จัดการได้ทุกรายการ" : access.position ? `ตำแหน่ง: ${access.position}` : "ยังไม่ได้รับมอบหมายตำแหน่งสำหรับสต๊อก"}{demo ? " · ทดลองในนามมะลิ" : ""}</p> : null}
       </div>

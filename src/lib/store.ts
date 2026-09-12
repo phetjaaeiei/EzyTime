@@ -1,4 +1,4 @@
-import type { AuthSession, EmployeeSession, NewTimeLog, TimeLog } from "../types";
+import type { AuthSession, EmployeeSession, NewTimeLog, StaffRole, TimeLog } from "../types";
 import { formatDateInput, getLocalDayRange } from "./time";
 import { extractNickname } from "./employee";
 import { isSupabaseConfigured, supabase } from "./supabase";
@@ -140,12 +140,17 @@ export function getDefaultDate(): string {
 }
 
 export async function signInAdmin(email: string, password: string): Promise<AuthSession> {
-  if (!supabase) return { email: "demo@local", isDemo: true };
+  if (!supabase) return { email: "demo@local", isDemo: true, role: "admin" };
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
 
-  return { email: data.user.email ?? email, isDemo: false };
+  const role = await getAdminRole(data.user.id);
+  if (!role) {
+    await supabase.auth.signOut();
+    throw new Error("บัญชีนี้ไม่มีสิทธิ์เข้าหน้าผู้ดูแล");
+  }
+  return { email: data.user.email ?? email, isDemo: false, role };
 }
 
 export async function signOutCurrentUser(): Promise<void> {
@@ -155,24 +160,24 @@ export async function signOutCurrentUser(): Promise<void> {
   }
 }
 
-async function isAdminUser(userId: string): Promise<boolean> {
-  if (!supabase) return false;
-  const { data, error } = await supabase.from("admin_users").select("user_id").eq("user_id", userId).maybeSingle();
-  if (error) return false;
-  return Boolean(data);
+async function getAdminRole(userId: string): Promise<StaffRole | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("admin_users").select("role").eq("user_id", userId).maybeSingle();
+  if (error || !data) return null;
+  return data.role === "ceo" || data.role === "manager" ? data.role : "admin";
 }
 
 export async function getCurrentSession(): Promise<AuthSession | null> {
-  if (!isSupabaseConfigured || !supabase) return { email: "demo@local", isDemo: true };
+  if (!isSupabaseConfigured || !supabase) return { email: "demo@local", isDemo: true, role: "admin" };
 
   const { data, error } = await supabase.auth.getSession();
   if (error) throw new Error(error.message);
   if (!data.session) return null;
 
-  const isAdmin = await isAdminUser(data.session.user.id);
-  if (!isAdmin) return null;
+  const role = await getAdminRole(data.session.user.id);
+  if (!role) return null;
 
-  return { email: data.session.user.email ?? undefined, isDemo: false };
+  return { email: data.session.user.email ?? undefined, isDemo: false, role };
 }
 
 export function onAuthChange(callback: (session: AuthSession | null) => void): () => void {
@@ -186,8 +191,8 @@ export function onAuthChange(callback: (session: AuthSession | null) => void): (
       return;
     }
 
-    isAdminUser(session.user.id).then((isAdmin) => {
-      callback(isAdmin ? { email: session.user.email ?? undefined, isDemo: false } : null);
+    getAdminRole(session.user.id).then((role) => {
+      callback(role ? { email: session.user.email ?? undefined, isDemo: false, role } : null);
     });
   });
 

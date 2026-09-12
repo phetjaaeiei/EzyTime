@@ -37,9 +37,14 @@ export interface SummaryRow {
   rawLogs: TimeLog[];
 }
 
+export type StaffRole = "admin" | "ceo" | "manager";
+
 export interface AuthSession {
   email?: string;
   isDemo: boolean;
+  // Elevated role of the signed-in user. CEO/Manager have admin-equivalent access;
+  // only "admin" (the primary admin) may assign roles.
+  role?: StaffRole;
 }
 
 export interface EmployeeSession {

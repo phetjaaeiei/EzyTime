@@ -1564,6 +1564,16 @@ tbody tr:hover {
 .stock-order-category-head h4 { margin: 0; font-size: .95rem; }
 .stock-order-category-head span { flex: 0 0 auto; border-radius: 999px; background: var(--surface); color: var(--muted); padding: 2px 9px; font-size: .72rem; font-weight: 700; }
 .stock-order-category .stock-order-list { max-height: none; overflow: visible; margin: .25rem 0 .35rem; }
+.role-panel-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--surface); color: var(--primary-strong); flex: 0 0 auto; }
+.role-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 10px; }
+.role-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; }
+.role-identity { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.role-identity small { color: var(--muted); }
+.role-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.role-choice { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-weight: 600; cursor: pointer; }
+.role-choice:hover:not(:disabled) { border-color: var(--primary-strong); }
+.role-choice.is-active { background: var(--primary-strong); border-color: var(--primary-strong); color: #fff; }
+.role-choice:disabled { opacity: .6; cursor: default; }
 @media (max-width: 480px) {
   .stock-order-row { gap: .25rem; }
   .stock-order-number { display: none; }

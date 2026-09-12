@@ -24,6 +24,8 @@ import {
 import type { AuthSession, SummaryRow, TimeLog } from "../types";
 import StockDashboard from "./stock/StockDashboard";
 import StockOverview from "./stock/StockOverview";
+import RoleManagementPanel from "./RoleManagementPanel";
+import { staffRoleLabel } from "../lib/roles";
 import {
   exportLogsCsv,
   fetchLogsByDate,
@@ -77,7 +79,7 @@ export default function AdminDashboard() {
   return <AdminConsole session={session} onSignedOut={() => setSession(null)} />;
 }
 
-type AdminModule = "attendance" | "stock" | "overview";
+type AdminModule = "attendance" | "stock" | "overview" | "roles";
 
 function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSignedOut: () => void }) {
   const [module, setModule] = useState<AdminModule>("attendance");
@@ -102,7 +104,7 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
     onSignedOut();
   }
 
-  const currentLabel = module === "attendance" ? "Dashboard" : module === "stock" ? "สต๊อกสินค้า" : "ภาพรวมสต๊อก";
+  const currentLabel = module === "attendance" ? "Dashboard" : module === "stock" ? "สต๊อกสินค้า" : module === "overview" ? "ภาพรวมสต๊อก" : "สิทธิ์ทีมงาน";
 
   return (
     <div className="admin-shell">
@@ -146,11 +148,22 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
             <BarChart3 size={19} />
             <span><strong>ภาพรวมสต๊อก</strong><small>กราฟคงเหลือและสรุปรายวัน</small></span>
           </button>
+          {session.role === "admin" ? (
+            <button
+              className={module === "roles" ? "admin-sidebar-link is-active" : "admin-sidebar-link"}
+              type="button"
+              onClick={() => selectModule("roles")}
+              aria-current={module === "roles" ? "page" : undefined}
+            >
+              <UsersRound size={19} />
+              <span><strong>สิทธิ์ทีมงาน</strong><small>ตั้ง CEO / Manager</small></span>
+            </button>
+          ) : null}
         </nav>
 
         <div className="admin-sidebar-account">
           <ShieldCheck size={18} aria-hidden="true" />
-          <span><small>เข้าสู่ระบบเป็น</small><strong>{session.isDemo ? "โหมดทดลอง" : session.email}</strong></span>
+          <span><small>{session.role ? staffRoleLabel(session.role) : "เข้าสู่ระบบเป็น"}</small><strong>{session.isDemo ? "โหมดทดลอง" : session.email}</strong></span>
           {isSupabaseConfigured ? (
             <button className="icon-button" type="button" onClick={handleSignOut} aria-label="ออกจากระบบ">
               <LogOut size={18} />
@@ -174,7 +187,11 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
           </button>
           <strong>{currentLabel}</strong>
         </div>
-        {module === "attendance" ? <Dashboard /> : module === "stock" ? <StockDashboard /> : <StockOverview />}
+        {module === "attendance" ? <Dashboard />
+          : module === "stock" ? <StockDashboard />
+          : module === "overview" ? <StockOverview />
+          : session.role === "admin" ? <RoleManagementPanel />
+          : <Dashboard />}
       </div>
     </div>
   );
