@@ -8,11 +8,13 @@ import {
   PackageSearch,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
 } from "lucide-react";
 import type { ItemBalance, StockItem, StockMovement } from "../../types";
 import { isOpeningBalanceMovement, listItems, listMovements, updateItem } from "../../lib/stock";
 import { computeDailyStats, computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
+import { matchesStockSearch } from "../../lib/stock.search";
 import { useAsyncData } from "../../lib/useAsyncData";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
 import ItemStockCard from "./ItemStockCard";
@@ -38,6 +40,7 @@ export default function StockDashboard() {
   const [deleteMessage, setDeleteMessage] = useState("");
   const [clearingHistory, setClearingHistory] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [query, setQuery] = useState("");
 
   const loadStock = useCallback(async () => {
     const [items, movements] = await Promise.all([listItems({ includeArchived: true }), listMovements()]);
@@ -56,7 +59,12 @@ export default function StockDashboard() {
     [showArchived, balances, activeBalances],
   );
   const archivedCount = balances.length - activeBalances.length;
-  const selectedItems = visibleBalances.filter(balance => selectedIds.includes(balance.item.id)).map(balance => balance.item);
+  const trimmedQuery = query.trim();
+  const searchedBalances = useMemo(
+    () => (trimmedQuery ? visibleBalances.filter((balance) => matchesStockSearch(balance.item, trimmedQuery)) : visibleBalances),
+    [visibleBalances, trimmedQuery],
+  );
+  const selectedItems = searchedBalances.filter(balance => selectedIds.includes(balance.item.id)).map(balance => balance.item);
   function selectItem(id: string, checked: boolean) {
     setSelectedIds(current => checked ? [...new Set([...current, id])] : current.filter(value => value !== id));
   }
@@ -68,8 +76,8 @@ export default function StockDashboard() {
     [movements],
   );
   const grouped: [string, ItemBalance[]][] = layout.order.length
-    ? [["ลำดับสินค้าของฉัน", applyStockOrder(visibleBalances.map(balance => ({ ...balance, id: balance.item.id })), layout.order)]]
-    : groupByCategory(visibleBalances);
+    ? [["ลำดับสินค้าของฉัน", applyStockOrder(searchedBalances.map(balance => ({ ...balance, id: balance.item.id })), layout.order)]]
+    : groupByCategory(searchedBalances);
   const categories = useMemo(
     () => Array.from(new Set(items.map((item) => item.category?.trim()).filter((value): value is string => !!value)))
       .sort((first, second) => first.localeCompare(second, "th-TH")),
@@ -143,22 +151,35 @@ export default function StockDashboard() {
         </div>
       ) : null}
 
+      {!loading && !error && visibleBalances.length ? (
+        <div className="stock-search">
+          <Search size={17} aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="ค้นหาสินค้า…"
+            aria-label="ค้นหาสินค้า"
+          />
+        </div>
+      ) : null}
+
       {deleteMessage ? <p role="status">{deleteMessage}</p> : null}
       {selecting && !loading && !error ? (
         <section className="stock-bulk-toolbar" aria-label="ลบสินค้าที่เลือก">
-          <strong>เลือก {selectedItems.length} จาก {visibleBalances.length} รายการที่แสดง</strong>
-          <button type="button" className="icon-text-button" onClick={() => setSelectedIds(visibleBalances.map(balance => balance.item.id))}>เลือกทั้งหมดที่แสดง</button>
+          <strong>เลือก {selectedItems.length} จาก {searchedBalances.length} รายการที่แสดง</strong>
+          <button type="button" className="icon-text-button" onClick={() => setSelectedIds(searchedBalances.map(balance => balance.item.id))}>เลือกทั้งหมดที่แสดง</button>
           <button type="button" className="icon-text-button quiet" onClick={() => setSelectedIds([])}>ล้างการเลือก</button>
           <button type="button" className="danger-button" disabled={!selectedItems.length} onClick={() => setDeletingItems(selectedItems)}><Trash2 size={17} /> ลบถาวร {selectedItems.length} รายการ</button>
         </section>
       ) : null}
-      {!selecting && !loading && !error ? <StockOrderEditor items={visibleBalances.map(balance => balance.item)} {...layout} /> : null}
+      {!selecting && !trimmedQuery && !loading && !error ? <StockOrderEditor items={visibleBalances.map(balance => balance.item)} {...layout} /> : null}
 
       {error ? (
         <div className="inline-error" role="alert">{error}</div>
       ) : loading ? (
         <TableSkeleton />
-      ) : visibleBalances.length ? (
+      ) : searchedBalances.length ? (
         grouped.map(([category, group]) => (
           <section key={category} className="stock-group" aria-label={category}>
             <h2 className="stock-group-title">{category}</h2>
@@ -188,6 +209,12 @@ export default function StockDashboard() {
             </div>
           </section>
         ))
+      ) : trimmedQuery ? (
+        <div className="empty-state">
+          <PackageSearch size={30} />
+          <h3>ไม่พบสินค้าที่ค้นหา</h3>
+          <p>ลองค้นด้วยคำอื่น หรือล้างคำค้นหา “{trimmedQuery}”</p>
+        </div>
       ) : (
         <div className="empty-state">
           <PackageSearch size={30} />

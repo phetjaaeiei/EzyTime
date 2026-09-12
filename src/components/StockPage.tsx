@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Boxes, History, Loader2, LogIn, PackageMinus } from "lucide-react";
+import { Boxes, History, Loader2, LogIn, PackageMinus, Search } from "lucide-react";
 import type { EmployeeSession, StockItem, StockMovement } from "../types";
 import {
   getEmployeeSession,
@@ -10,6 +10,7 @@ import { isSupabaseConfigured } from "../lib/supabase";
 import { listItems, listMovements, listStockOnHand } from "../lib/stock";
 import { getEmployeeStockAccess, type EmployeeStockAccess } from "../lib/stock.permissions";
 import { formatQuantity } from "../lib/stock.calc";
+import { matchesStockSearch } from "../lib/stock.search";
 import { useAsyncData } from "../lib/useAsyncData";
 import { formatTime } from "../lib/time";
 import StockOrderEditor from "./stock/StockOrderEditor";
@@ -61,6 +62,7 @@ function SignInPanel() {
 function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   const layout = useStockOrder();
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
+  const [query, setQuery] = useState("");
 
   const loadStock = useCallback(async () => {
     const access = await getEmployeeStockAccess();
@@ -75,7 +77,12 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   });
   const { items, movements, onHandByItem, access } = data;
 
-  const itemGroups = useMemo<[string, StockItem[]][]>(() => !items.length ? [] : layout.order.length ? [["ลำดับสินค้าของฉัน", applyStockOrder(items, layout.order)]] : groupItemsByCategory(items), [items, layout.order]);
+  const trimmedQuery = query.trim();
+  const filteredItems = useMemo(
+    () => (trimmedQuery ? items.filter((item) => matchesStockSearch(item, trimmedQuery)) : items),
+    [items, trimmedQuery],
+  );
+  const itemGroups = useMemo<[string, StockItem[]][]>(() => !filteredItems.length ? [] : layout.order.length ? [["ลำดับสินค้าของฉัน", applyStockOrder(filteredItems, layout.order)]] : groupItemsByCategory(filteredItems), [filteredItems, layout.order]);
   const todayMine = movements.filter((m) => new Date(m.created_at).toDateString() === new Date().toDateString());
 
   return (
@@ -101,7 +108,19 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
             <span className="employee-stock-section-icon" aria-hidden="true"><Boxes size={20} /></span>
           </div>
           {error ? <div role="alert"><p className="form-error">{error}</p><button className="icon-text-button" onClick={reload}>ลองโหลดสินค้าอีกครั้ง</button></div> : null}
-          {!loading && !error ? <StockOrderEditor items={items} {...layout} /> : null}
+          {!loading && !error && items.length ? (
+            <div className="stock-search">
+              <Search size={17} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="ค้นหาสินค้า…"
+                aria-label="ค้นหาสินค้า"
+              />
+            </div>
+          ) : null}
+          {!loading && !error && !trimmedQuery ? <StockOrderEditor items={items} {...layout} /> : null}
           {loading ? (
             <div className="skeleton-table">{Array.from({ length: 4 }).map((_, i) => <span key={i} />)}</div>
           ) : error ? null : itemGroups.length ? (
@@ -142,6 +161,8 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
                 );
               })}
             </div>
+          ) : trimmedQuery ? (
+            <p className="employee-stock-history-empty">ไม่พบสินค้าที่ค้นหา “{trimmedQuery}”</p>
           ) : (
             <p className="employee-stock-history-empty">ยังไม่มีสินค้าที่ได้รับมอบหมาย กรุณาติดต่อ admin เพื่อกำหนดตำแหน่งและสิทธิ์สินค้า</p>
           )}
