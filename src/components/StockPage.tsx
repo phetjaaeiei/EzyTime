@@ -8,6 +8,7 @@ import {
 } from "../lib/store";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { listItems, listMovements, listStockOnHand } from "../lib/stock";
+import { getEmployeeStockAccess, type EmployeeStockAccess } from "../lib/stock.permissions";
 import { formatQuantity } from "../lib/stock.calc";
 import { useAsyncData } from "../lib/useAsyncData";
 import { formatTime } from "../lib/time";
@@ -29,7 +30,7 @@ function GoogleGate() {
 
   if (session === undefined) return <section className="clock-layout" aria-label="กำลังโหลด"><div className="skeleton-heading" /></section>;
   if (!session) return <SignInPanel />;
-  return <StockWithdrawUI />;
+  return <StockWithdrawUI key={session.userId} />;
 }
 
 function SignInPanel() {
@@ -58,15 +59,17 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
 
   const loadStock = useCallback(async () => {
+    const access = await getEmployeeStockAccess();
     const [items, mine, onHandByItem] = await Promise.all([listItems(), listMovements({ mine: true }), listStockOnHand()]);
-    return { items, movements: mine, onHandByItem };
+    return { items: items.filter((item) => access.isAdmin || access.itemIds.includes(item.id)), movements: mine, onHandByItem, access };
   }, []);
   const { data, loading, error, reload } = useAsyncData(loadStock, {
+    access: null as EmployeeStockAccess | null,
     items: [] as StockItem[],
     movements: [] as StockMovement[],
     onHandByItem: null as Record<string, number> | null,
   });
-  const { items, movements, onHandByItem } = data;
+  const { items, movements, onHandByItem, access } = data;
 
   const itemGroups = useMemo(() => groupItemsByCategory(items), [items]);
   const todayMine = movements.filter((m) => new Date(m.created_at).toDateString() === new Date().toDateString());
@@ -76,7 +79,8 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
       <div className="clock-hero employee-stock-hero">
         <div className="eyebrow-row"><span className="status-dot" />{demo ? "โหมดทดลอง" : "เบิกของ"}</div>
         <h1 id="emp-stock-heading">เบิกของเข้าครัว</h1>
-        <p className="lead-copy">เลือกสินค้าแล้วกดเบิก ระบบจะบันทึกชื่อและเวลาให้อัตโนมัติ</p>
+        <p className="lead-copy">เบิกและบันทึกของเสียเฉพาะสินค้าที่ admin มอบหมายให้ตำแหน่งของคุณ</p>
+        {access ? <p className="muted-copy">{access.isAdmin ? "Admin · จัดการได้ทุกรายการ" : access.position ? `ตำแหน่ง: ${access.position}` : "ยังไม่ได้รับมอบหมายตำแหน่งสำหรับสต๊อก"}{demo ? " · ทดลองในนามมะลิ" : ""}</p> : null}
       </div>
 
       <div className="employee-stock-panels">
@@ -92,10 +96,10 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
             </div>
             <span className="employee-stock-section-icon" aria-hidden="true"><Boxes size={20} /></span>
           </div>
-          {error ? <p className="form-error" role="alert">{error}</p> : null}
+          {error ? <div role="alert"><p className="form-error">{error}</p><button className="icon-text-button" onClick={reload}>ลองโหลดสินค้าอีกครั้ง</button></div> : null}
           {loading ? (
             <div className="skeleton-table">{Array.from({ length: 4 }).map((_, i) => <span key={i} />)}</div>
-          ) : itemGroups.length ? (
+          ) : error ? null : itemGroups.length ? (
             <div className="emp-stock-groups">
               {itemGroups.map(([category, categoryItems], categoryIndex) => {
                 const headingId = `employee-stock-category-${categoryIndex}`;
@@ -133,7 +137,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
               })}
             </div>
           ) : (
-            <p className="employee-stock-history-empty">ยังไม่มีสินค้าให้เบิก</p>
+            <p className="employee-stock-history-empty">ยังไม่มีสินค้าที่ได้รับมอบหมาย กรุณาติดต่อ admin เพื่อกำหนดตำแหน่งและสิทธิ์สินค้า</p>
           )}
         </section>
 
@@ -166,6 +170,7 @@ function StockWithdrawUI({ demo = false }: { demo?: boolean }) {
       {movingItem ? (
         <MovementDialog
           item={movingItem}
+          employeeMode
           allowedTypes={["out", "waste"]}
           availableQuantity={onHandByItem?.[movingItem.id]}
           onClose={() => setMovingItem(null)}

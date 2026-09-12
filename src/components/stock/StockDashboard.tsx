@@ -21,8 +21,10 @@ import DeleteItemDialog from "./DeleteItemDialog";
 import MovementDialog from "./MovementDialog";
 import StockOverviewChart from "./StockOverviewChart";
 import ClearHistoryDialog from "./ClearHistoryDialog";
+import StockPermissionsPanel from "./StockPermissionsPanel";
 
 export default function StockDashboard() {
+  const [showPermissions, setShowPermissions] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => formatDateInput(new Date()));
   const [editing, setEditing] = useState<StockItem | null | "new">(null);
   const [movingItem, setMovingItem] = useState<StockItem | null>(null);
@@ -56,7 +58,13 @@ export default function StockDashboard() {
   );
   const grouped = useMemo(() => groupByCategory(visibleBalances), [visibleBalances]);
   const categories = useMemo(
-    () => Array.from(new Set(items.map((i) => i.category).filter((c): c is string => !!c))),
+    () => Array.from(new Set(items.map((item) => item.category?.trim()).filter((value): value is string => !!value)))
+      .sort((first, second) => first.localeCompare(second, "th-TH")),
+    [items],
+  );
+  const units = useMemo(
+    () => Array.from(new Set(items.map((item) => item.unit.trim()).filter(Boolean)))
+      .sort((first, second) => first.localeCompare(second, "th-TH")),
     [items],
   );
 
@@ -80,6 +88,7 @@ export default function StockDashboard() {
           <p className="muted-copy">{formatThaiDate(selectedDate)}</p>
         </div>
         <div className="admin-actions">
+          <button className="icon-text-button" type="button" aria-expanded={showPermissions} onClick={() => setShowPermissions((value) => !value)}>สิทธิ์จัดการสต๊อก</button>
           <label className="date-control">
             <CalendarDays size={17} />
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} aria-label="เลือกวันที่" />
@@ -102,6 +111,8 @@ export default function StockDashboard() {
           </button>
         </div>
       </div>
+
+      {showPermissions && !loading && !error ? <StockPermissionsPanel items={items} /> : null}
 
       {activeBalances.length ? <StockOverviewChart balances={activeBalances} daily={daily} /> : null}
 
@@ -162,6 +173,7 @@ export default function StockDashboard() {
           item={editing === "new" ? undefined : editing}
           balance={editing === "new" ? undefined : balances.find((balance) => balance.item.id === editing.id)}
           categorySuggestions={categories}
+          unitSuggestions={units}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); void reload(); }}
         />

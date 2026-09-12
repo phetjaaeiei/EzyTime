@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import type { MovementType, StockItem } from "../../types";
+import { getEmployeeStockAccess } from "../../lib/stock.permissions";
 import { recordMovement } from "../../lib/stock";
 import { formatQuantity } from "../../lib/stock.calc";
 import { Dialog } from "./ItemFormDialog";
@@ -9,13 +10,14 @@ interface Props {
   item: StockItem;
   allowedTypes: MovementType[];
   availableQuantity?: number;
+  employeeMode?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
 const TYPE_LABEL: Record<MovementType, string> = { in: "รับเข้า", out: "เบิกออก", waste: "ของเสีย" };
 
-export default function MovementDialog({ item, allowedTypes, availableQuantity, onClose, onSaved }: Props) {
+export default function MovementDialog({ item, allowedTypes, availableQuantity, employeeMode = false, onClose, onSaved }: Props) {
   const [type, setType] = useState<MovementType>(allowedTypes[0]);
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
@@ -36,6 +38,10 @@ export default function MovementDialog({ item, allowedTypes, availableQuantity, 
     setError("");
     setSaving(true);
     try {
+      if (employeeMode) {
+        const access = await getEmployeeStockAccess();
+        if (!access.isAdmin && !access.itemIds.includes(item.id)) throw new Error("คุณไม่มีสิทธิ์จัดการสินค้านี้แล้ว กรุณาติดต่อ admin");
+      }
       await recordMovement({ item_id: item.id, type, quantity: qty, note });
       onSaved();
     } catch (cause) {

@@ -4,23 +4,39 @@ import type { ItemBalance, NewStockItem, StockItem } from "../../types";
 import { archiveItem, createItem, setStockBalanceTotals, updateItem } from "../../lib/stock";
 import { formatQuantity } from "../../lib/stock.calc";
 
+const CUSTOM_OPTION_VALUE = "__custom__";
+
 interface Props {
   item?: StockItem;
   balance?: ItemBalance;
   categorySuggestions: string[];
+  unitSuggestions: string[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function ItemFormDialog({ item, balance, categorySuggestions, onClose, onSaved }: Props) {
+export default function ItemFormDialog({
+  item,
+  balance,
+  categorySuggestions,
+  unitSuggestions,
+  onClose,
+  onSaved,
+}: Props) {
   const [name, setName] = useState(item?.name ?? "");
   const [unit, setUnit] = useState(item?.unit ?? "กก.");
   const [category, setCategory] = useState(item?.category ?? "");
+  const [addingUnit, setAddingUnit] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
   const [threshold, setThreshold] = useState(item?.low_stock_threshold?.toString() ?? "");
   const [received, setReceived] = useState(balance?.received.toString() ?? "");
   const [onHand, setOnHand] = useState(balance?.onHand.toString() ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const availableUnits = Array.from(new Set([item?.unit, ...unitSuggestions].filter((value): value is string => !!value)));
+  const availableCategories = Array.from(
+    new Set([item?.category, ...categorySuggestions].filter((value): value is string => !!value)),
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,12 +109,53 @@ export default function ItemFormDialog({ item, balance, categorySuggestions, onC
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น เนื้อสันคอ" required />
         </label>
         <label className="field"><span>หน่วย</span>
-          <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="เช่น กก. / ชิ้น / ขวด" required />
+          <select
+            value={addingUnit ? CUSTOM_OPTION_VALUE : unit}
+            onChange={(event) => {
+              if (event.target.value === CUSTOM_OPTION_VALUE) {
+                setAddingUnit(true);
+                setUnit("");
+              } else {
+                setAddingUnit(false);
+                setUnit(event.target.value);
+              }
+            }}
+            required
+          >
+            {availableUnits.map((suggestion) => <option key={suggestion} value={suggestion}>{suggestion}</option>)}
+            <option value={CUSTOM_OPTION_VALUE}>＋ เพิ่มหน่วยใหม่…</option>
+          </select>
+          <small className="field-hint">มีหน่วยเดิมให้เลือกครบ หรือเพิ่มหน่วยใหม่ได้</small>
         </label>
+        {addingUnit ? (
+          <label className="field"><span>ชื่อหน่วยใหม่</span>
+            <input value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="เช่น กล่อง / ลัง" autoFocus required />
+          </label>
+        ) : null}
         <label className="field"><span>หมวดหมู่ (ไม่บังคับ)</span>
-          <input list="stock-cats" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="เช่น เนื้อ / ผัก" />
-          <datalist id="stock-cats">{categorySuggestions.map((c) => <option key={c} value={c} />)}</datalist>
+          <select
+            value={addingCategory ? CUSTOM_OPTION_VALUE : category}
+            onChange={(event) => {
+              if (event.target.value === CUSTOM_OPTION_VALUE) {
+                setAddingCategory(true);
+                setCategory("");
+              } else {
+                setAddingCategory(false);
+                setCategory(event.target.value);
+              }
+            }}
+          >
+            <option value="">ไม่ระบุหมวดหมู่</option>
+            {availableCategories.map((suggestion) => <option key={suggestion} value={suggestion}>{suggestion}</option>)}
+            <option value={CUSTOM_OPTION_VALUE}>＋ เพิ่มหมวดหมู่ใหม่…</option>
+          </select>
+          <small className="field-hint">มีหมวดหมู่เดิมให้เลือกครบ หรือเพิ่มหมวดหมู่ใหม่ได้</small>
         </label>
+        {addingCategory ? (
+          <label className="field"><span>ชื่อหมวดหมู่ใหม่</span>
+            <input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="เช่น ของแห้ง" autoFocus />
+          </label>
+        ) : null}
         {item && balance ? (
           <div className="stock-balance-editor">
             <label className="field"><span>รับเข้าทั้งหมด ({unit.trim() || item.unit})</span>

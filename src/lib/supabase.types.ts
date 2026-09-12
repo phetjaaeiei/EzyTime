@@ -38,6 +38,16 @@ export interface Database {
         };
         Update: never;
       };
+      employee_stock_positions: {
+        Row: { user_id: string; position: Position };
+        Insert: { user_id: string; position: Position };
+        Update: { position?: Position };
+      };
+      position_stock_items: {
+        Row: { position: Position; item_id: string };
+        Insert: { position: Position; item_id: string };
+        Update: never;
+      };
       stock_items: {
         Row: {
           id: string;
@@ -96,6 +106,18 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      list_stock_employees: {
+        Args: Record<PropertyKey, never>;
+        Returns: Array<{ user_id: string; display_name: string; email: string | null; position: Position | null }>;
+      };
+      set_position_stock_items: {
+        Args: { target_position: Position; target_item_ids: string[] };
+        Returns: undefined;
+      };
+      can_manage_stock_item: {
+        Args: { target_item_id: string };
+        Returns: boolean;
+      };
       get_stock_item_balances: {
         Args: Record<PropertyKey, never>;
         Returns: Array<{ item_id: string; on_hand: number }>;
