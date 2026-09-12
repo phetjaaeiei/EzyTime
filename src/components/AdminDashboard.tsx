@@ -10,6 +10,7 @@ import {
   Download,
   LayoutDashboard,
   Loader2,
+  LogIn,
   LogOut,
   Menu,
   Printer,
@@ -32,8 +33,10 @@ import {
   fetchLogsByDate,
   getCurrentSession,
   getDefaultDate,
+  hasActiveSession,
   onAuthChange,
   signInAdmin,
+  signInWithGoogleAdmin,
   signOutCurrentUser,
 } from "../lib/store";
 import { isSupabaseConfigured } from "../lib/supabase";
@@ -50,19 +53,28 @@ type LoadState = "idle" | "loading" | "error";
 
 export default function AdminDashboard() {
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
+  const [signedInNoAccess, setSignedInNoAccess] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     getCurrentSession()
-      .then((currentSession) => {
-        if (isMounted) setSession(currentSession);
+      .then(async (currentSession) => {
+        if (currentSession) {
+          if (isMounted) { setSession(currentSession); setSignedInNoAccess(false); }
+          return;
+        }
+        const signedIn = await hasActiveSession();
+        if (isMounted) { setSession(null); setSignedInNoAccess(signedIn); }
       })
       .catch(() => {
         if (isMounted) setSession(null);
       });
 
-    const unsubscribe = onAuthChange(setSession);
+    const unsubscribe = onAuthChange((next, signedIn) => {
+      setSession(next);
+      setSignedInNoAccess(!next && signedIn);
+    });
     return () => {
       isMounted = false;
       unsubscribe();
@@ -74,7 +86,7 @@ export default function AdminDashboard() {
   }
 
   if (!session) {
-    return <LoginPanel onSignedIn={setSession} />;
+    return <LoginPanel onSignedIn={setSession} signedInNoAccess={signedInNoAccess} />;
   }
 
   return <AdminConsole session={session} onSignedOut={() => setSession(null)} />;
@@ -208,11 +220,13 @@ function AdminConsole({ session, onSignedOut }: { session: AuthSession; onSigned
   );
 }
 
-function LoginPanel({ onSignedIn }: { onSignedIn: (session: AuthSession) => void }) {
+function LoginPanel({ onSignedIn, signedInNoAccess }: { onSignedIn: (session: AuthSession) => void; signedInNoAccess: boolean }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -229,6 +243,26 @@ function LoginPanel({ onSignedIn }: { onSignedIn: (session: AuthSession) => void
     }
   }
 
+  async function handleGoogle() {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogleAdmin();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "เข้าสู่ระบบไม่สำเร็จ");
+      setGoogleLoading(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await signOutCurrentUser();
+    } finally {
+      window.location.reload();
+    }
+  }
+
   return (
     <section className="login-layout" aria-labelledby="login-heading">
       <div className="login-panel">
@@ -236,43 +270,62 @@ function LoginPanel({ onSignedIn }: { onSignedIn: (session: AuthSession) => void
           <ShieldCheck size={24} />
         </span>
         <h1 id="login-heading">Admin login</h1>
-        <p className="muted-copy">ใช้บัญชี admin ใน Supabase เพื่อดูข้อมูลรายวัน</p>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>อีเมล</span>
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="admin@example.com"
-              required
-            />
-          </label>
-          <label className="field">
-            <span>รหัสผ่าน</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="กรอกรหัสผ่าน"
-              required
-            />
-          </label>
+        {signedInNoAccess ? (
+          <>
+            <p className="muted-copy">บัญชีนี้เข้าสู่ระบบแล้ว แต่ยังไม่มีสิทธิ์เข้าหน้าผู้ดูแล — ให้ admin ตั้งสิทธิ์ CEO หรือ Manager ให้บัญชีนี้ก่อน แล้วเข้าใหม่อีกครั้ง</p>
+            {error ? <p className="form-error" role="alert">{error}</p> : null}
+            <button className="primary-button" type="button" onClick={handleSignOut} disabled={signingOut}>
+              {signingOut ? <Loader2 className="spin" size={18} /> : <LogOut size={18} />} ออกจากระบบ
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="muted-copy">ผู้ดูแล / CEO / Manager เข้าสู่ระบบเพื่อจัดการร้าน</p>
 
-          {error ? (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          ) : null}
+            <button className="primary-button" type="button" onClick={handleGoogle} disabled={googleLoading}>
+              {googleLoading ? <Loader2 className="spin" size={18} /> : <LogIn size={18} />} เข้าสู่ระบบด้วย Google
+            </button>
 
-          <button className="primary-button" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
-            เข้าหน้า admin
-          </button>
-        </form>
+            <p className="muted-copy login-or">หรือใช้อีเมลผู้ดูแล</p>
+
+            <form className="login-form" onSubmit={handleSubmit}>
+              <label className="field">
+                <span>อีเมล</span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="admin@example.com"
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>รหัสผ่าน</span>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="กรอกรหัสผ่าน"
+                  required
+                />
+              </label>
+
+              {error ? (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
+
+              <button className="icon-text-button login-email-submit" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="spin" size={18} /> : <ShieldCheck size={18} />}
+                เข้าหน้า admin
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </section>
   );

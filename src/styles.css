@@ -1578,6 +1578,8 @@ tbody tr:hover {
 .stock-log-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
 .stock-log-controls .stock-search { flex: 1 1 240px; }
 .stock-log-list { max-height: none; }
+.login-or { text-align: center; margin: 8px 0 2px; font-size: .82rem; }
+.login-email-submit { width: 100%; justify-content: center; }
 @media (max-width: 480px) {
   .stock-order-row { gap: .25rem; }
   .stock-order-number { display: none; }

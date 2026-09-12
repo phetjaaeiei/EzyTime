@@ -180,19 +180,27 @@ export async function getCurrentSession(): Promise<AuthSession | null> {
   return { email: data.session.user.email ?? undefined, isDemo: false, role };
 }
 
-export function onAuthChange(callback: (session: AuthSession | null) => void): () => void {
+export async function hasActiveSession(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data } = await supabase.auth.getSession();
+  return Boolean(data.session);
+}
+
+// Second arg tells the admin screen whether someone is signed in but lacks an
+// admin/ceo/manager role (so it can offer sign-out instead of a login form).
+export function onAuthChange(callback: (session: AuthSession | null, signedIn: boolean) => void): () => void {
   if (!supabase) return () => undefined;
 
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
     if (!session) {
-      callback(null);
+      callback(null, false);
       return;
     }
 
     getAdminRole(session.user.id).then((role) => {
-      callback(role ? { email: session.user.email ?? undefined, isDemo: false, role } : null);
+      callback(role ? { email: session.user.email ?? undefined, isDemo: false, role } : null, true);
     });
   });
 
@@ -204,6 +212,17 @@ export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: `${window.location.origin}/clock` },
+  });
+  if (error) throw new Error(error.message);
+}
+
+// Admin console sign-in for elevated Google users (CEO/Manager, or admins who
+// prefer Google) — returns to "/" where the role is resolved.
+export async function signInWithGoogleAdmin(): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${window.location.origin}/` },
   });
   if (error) throw new Error(error.message);
 }
