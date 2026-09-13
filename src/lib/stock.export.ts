@@ -12,17 +12,39 @@ export interface StockExportRow {
 }
 
 const HEADERS = ["หมวดหมู่", "ชื่อสินค้า", "คงเหลือ", "จุดแจ้งเตือน", "สถานะ"];
+const LOW_FILL = "#FFCC80"; // ใกล้หมด → orange
+const OUT_FILL = "#EF9A9A"; // หมด → red
+
+function fillFor(status: string): string {
+  if (status === "หมด") return OUT_FILL;
+  if (status === "ใกล้หมด") return LOW_FILL;
+  return "";
+}
+
+// Every cell is centered; a filled cell also gets its status color. `align`/
+// `bgcolor` are kept alongside the inline style for Excel's HTML import.
+function cellHtml(content: string, tag: "td" | "th", fill: string): string {
+  const bg = fill ? ` bgcolor="${fill}"` : "";
+  const style = `text-align:center;vertical-align:middle;${fill ? `background-color:${fill};` : ""}`;
+  return `<${tag} align="center"${bg} style="${style}">${content}</${tag}>`;
+}
+
+function headerRowHtml(): string {
+  return `<tr>${HEADERS.map((header) => cellHtml(escapeHtml(header), "th", "")).join("")}</tr>`;
+}
 
 // The on-hand value carries its unit inline (e.g. "3 ลิตร"), so there is no
-// separate unit column.
-function exportCells(row: StockExportRow): string[] {
-  return [
+// separate unit column. The whole row is tinted by stock status.
+function bodyRowHtml(row: StockExportRow): string {
+  const fill = fillFor(row.status);
+  const cells = [
     escapeHtml(row.category),
     escapeHtml(row.name),
     escapeHtml(`${formatQuantity(row.onHand)} ${row.unit}`),
     row.threshold == null ? "" : String(row.threshold),
     escapeHtml(row.status),
   ];
+  return `<tr>${cells.map((cell) => cellHtml(cell, "td", fill)).join("")}</tr>`;
 }
 
 function statusOf(balance: ItemBalance): string {
@@ -52,11 +74,8 @@ function escapeHtml(value: string): string {
 // An HTML table saved with the Excel MIME type opens natively in Excel with real
 // columns — no spreadsheet library (keeps the Workers bundle lean).
 export function buildStockExcelHtml(rows: StockExportRow[]): string {
-  const head = HEADERS.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
-  const body = rows
-    .map((row) => `<tr>${exportCells(row).map((cell) => `<td>${cell}</td>`).join("")}</tr>`)
-    .join("");
-  return `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
+  const body = rows.map(bodyRowHtml).join("");
+  return `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1"><thead>${headerRowHtml()}</thead><tbody>${body}</tbody></table></body></html>`;
 }
 
 export function stockExportFilename(date = new Date()): string {
@@ -99,16 +118,13 @@ export function stockDailySnapshots(items: StockItem[], movements: StockMovement
 // Multiple worksheets in one .xls: each <table> becomes a sheet, named in order
 // by the <x:ExcelWorksheets> block (the classic Excel-HTML multi-sheet trick).
 export function buildStockWorkbookHtml(sheets: StockDaySheet[]): string {
-  const head = HEADERS.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
   const names = sheets
     .map((sheet) => `<x:ExcelWorksheet><x:Name>${escapeHtml(sheet.name)}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>`)
     .join("");
   const tables = sheets
     .map((sheet) => {
-      const body = sheet.rows
-        .map((row) => `<tr>${exportCells(row).map((cell) => `<td>${cell}</td>`).join("")}</tr>`)
-        .join("");
-      return `<table border="1"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+      const body = sheet.rows.map(bodyRowHtml).join("");
+      return `<table border="1"><thead>${headerRowHtml()}</thead><tbody>${body}</tbody></table>`;
     })
     .join("");
   return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>${names}</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>${tables}</body></html>`;

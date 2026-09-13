@@ -41,6 +41,17 @@ it('builds an Excel-openable HTML table; unit is merged into the on-hand cell (n
   expect(html).not.toContain('<th>หน่วย</th>'); // unit column removed
 });
 
+it('centers every cell and tints low (orange) and out-of-stock (red) rows', () => {
+  const html = buildStockExcelHtml(buildStockExportRows([
+    balance('low', 'c', 2, true),  // ใกล้หมด
+    balance('out', 'c', 0, false), // หมด
+    balance('ok', 'c', 5, false),  // ปกติ
+  ])).toLowerCase();
+  expect(html).toContain('text-align:center');
+  expect(html).toContain('#ffcc80'); // orange for ใกล้หมด
+  expect(html).toContain('#ef9a9a'); // red for หมด
+});
+
 it('names the file with an .xls extension', () => {
   expect(stockExportFilename(new Date('2026-09-13T12:00:00'))).toMatch(/^haekpak-shabu-stock-\d{4}-\d{2}-\d{2}\.xls$/);
 });
