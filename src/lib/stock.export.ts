@@ -1,5 +1,5 @@
 import type { ItemBalance, StockItem, StockMovement } from "../types";
-import { computeItemBalances } from "./stock.calc";
+import { computeItemBalances, formatQuantity } from "./stock.calc";
 import { formatDateInput, getLocalDayRange } from "./time";
 
 export interface StockExportRow {
@@ -11,7 +11,19 @@ export interface StockExportRow {
   status: string;
 }
 
-const HEADERS = ["หมวดหมู่", "ชื่อสินค้า", "หน่วย", "คงเหลือ", "จุดแจ้งเตือน", "สถานะ"];
+const HEADERS = ["หมวดหมู่", "ชื่อสินค้า", "คงเหลือ", "จุดแจ้งเตือน", "สถานะ"];
+
+// The on-hand value carries its unit inline (e.g. "3 ลิตร"), so there is no
+// separate unit column.
+function exportCells(row: StockExportRow): string[] {
+  return [
+    escapeHtml(row.category),
+    escapeHtml(row.name),
+    escapeHtml(`${formatQuantity(row.onHand)} ${row.unit}`),
+    row.threshold == null ? "" : String(row.threshold),
+    escapeHtml(row.status),
+  ];
+}
 
 function statusOf(balance: ItemBalance): string {
   if (balance.onHand <= 0) return "หมด";
@@ -42,17 +54,7 @@ function escapeHtml(value: string): string {
 export function buildStockExcelHtml(rows: StockExportRow[]): string {
   const head = HEADERS.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
   const body = rows
-    .map((row) => {
-      const cells = [
-        escapeHtml(row.category),
-        escapeHtml(row.name),
-        escapeHtml(row.unit),
-        String(row.onHand),
-        row.threshold == null ? "" : String(row.threshold),
-        escapeHtml(row.status),
-      ];
-      return `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`;
-    })
+    .map((row) => `<tr>${exportCells(row).map((cell) => `<td>${cell}</td>`).join("")}</tr>`)
     .join("");
   return `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
 }
@@ -86,9 +88,9 @@ export function stockDailySnapshots(items: StockItem[], movements: StockMovement
   while (cursor.getTime() < endBound) {
     const dayStr = formatDateInput(cursor);
     const cutoff = getLocalDayRange(dayStr).end.getTime();
-    const itemsAsOf = items.filter((item) => !item.created_at || Date.parse(item.created_at) < cutoff);
+    // Every sheet lists every item — only the end-of-day balances differ per day.
     const movesAsOf = movements.filter((movement) => Date.parse(movement.created_at) < cutoff);
-    sheets.push({ name: dayStr, rows: buildStockExportRows(computeItemBalances(itemsAsOf, movesAsOf)) });
+    sheets.push({ name: dayStr, rows: buildStockExportRows(computeItemBalances(items, movesAsOf)) });
     cursor.setDate(cursor.getDate() + 1);
   }
   return sheets;
@@ -104,17 +106,7 @@ export function buildStockWorkbookHtml(sheets: StockDaySheet[]): string {
   const tables = sheets
     .map((sheet) => {
       const body = sheet.rows
-        .map((row) => {
-          const cells = [
-            escapeHtml(row.category),
-            escapeHtml(row.name),
-            escapeHtml(row.unit),
-            String(row.onHand),
-            row.threshold == null ? "" : String(row.threshold),
-            escapeHtml(row.status),
-          ];
-          return `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`;
-        })
+        .map((row) => `<tr>${exportCells(row).map((cell) => `<td>${cell}</td>`).join("")}</tr>`)
         .join("");
       return `<table border="1"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
     })
