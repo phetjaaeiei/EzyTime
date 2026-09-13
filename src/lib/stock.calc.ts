@@ -77,15 +77,25 @@ export function formatQuantity(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/\.?0+$/, "");
 }
 
-// Parse a free-typed quantity: accepts digits + one decimal point (comma allowed),
-// keeps up to 3 decimals without spinner rounding, and returns null for anything
-// that is not a number (so a text input can be used, yet "/" or letters are rejected).
+// Parse a free-typed quantity: plain decimals (comma allowed) OR fractions like
+// "1/2" and mixed numbers like "1 1/2", kept to 3 decimals without spinner
+// rounding. Returns null for anything that is not a number (letters, a lone "/").
 export function parseQuantityInput(text: string): number | null {
   const trimmed = text.trim().replace(/,/g, ".");
-  if (trimmed === "" || trimmed === "." || !/^\d*\.?\d*$/.test(trimmed)) return null;
+  if (trimmed === "") return null;
+
+  const fraction = trimmed.match(/^(?:(\d+(?:\.\d+)?)\s+)?(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/);
+  if (fraction) {
+    const whole = fraction[1] ? Number(fraction[1]) : 0;
+    const denominator = Number(fraction[3]);
+    if (denominator === 0) return null;
+    const value = whole + Number(fraction[2]) / denominator;
+    return Number.isFinite(value) ? Math.round(value * 1000) / 1000 : null;
+  }
+
+  if (trimmed === "." || !/^\d*\.?\d*$/.test(trimmed)) return null;
   const value = Number(trimmed);
-  if (!Number.isFinite(value)) return null;
-  return Math.round(value * 1000) / 1000;
+  return Number.isFinite(value) ? Math.round(value * 1000) / 1000 : null;
 }
 
 function round(value: number): number {

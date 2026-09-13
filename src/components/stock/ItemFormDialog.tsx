@@ -156,10 +156,10 @@ export default function ItemFormDialog({
         {item && balance ? (
           <div className="stock-balance-editor">
             <label className="field"><span>รับเข้าทั้งหมด ({unit.trim() || item.unit})</span>
-              <input type="text" inputMode="decimal" value={received} onChange={(e) => setReceived(e.target.value)} required />
+              <input type="text" inputMode="text" value={received} onChange={(e) => setReceived(e.target.value)} placeholder="เช่น 1.5 หรือ 1/2" required />
             </label>
             <label className="field"><span>จำนวนคงเหลือ ({unit.trim() || item.unit})</span>
-              <input type="text" inputMode="decimal" value={onHand} onChange={(e) => setOnHand(e.target.value)} required />
+              <input type="text" inputMode="text" value={onHand} onChange={(e) => setOnHand(e.target.value)} placeholder="เช่น 1.5 หรือ 1/2" required />
             </label>
             <small className="field-hint">
               ของเสียสะสม {formatQuantity(balance.waste)} {item.unit} ระบบจะคำนวณยอดเบิกใช้และปรับประวัติให้ตรงกับจำนวนใหม่
@@ -167,7 +167,7 @@ export default function ItemFormDialog({
           </div>
         ) : null}
         <label className="field"><span>แจ้งเตือนเมื่อเหลือน้อยกว่า (ไม่บังคับ)</span>
-          <input type="text" inputMode="decimal" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="เช่น 5" />
+          <input type="text" inputMode="text" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="เช่น 5" />
         </label>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         <button className="primary-button" type="submit" disabled={saving}>

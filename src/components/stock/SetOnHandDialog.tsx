@@ -39,7 +39,7 @@ export default function SetOnHandDialog({ item, currentOnHand, onClose, onSaved 
       <form className="clock-form" onSubmit={handleSubmit}>
         <p className="muted-copy">คงเหลือปัจจุบัน {formatQuantity(currentOnHand)} {item.unit} — ระบบจะบันทึกเป็นรายการปรับยอด (ไม่ลบประวัติเดิม)</p>
         <label className="field"><span>ยอดคงเหลือใหม่ ({item.unit})</span>
-          <input type="text" inputMode="decimal" value={value} onChange={(event) => setValue(event.target.value)} placeholder="เช่น 1.5" autoFocus required />
+          <input type="text" inputMode="text" value={value} onChange={(event) => setValue(event.target.value)} placeholder="เช่น 1.5 หรือ 1/2" autoFocus required />
         </label>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         <button className="primary-button" type="submit" disabled={saving}>

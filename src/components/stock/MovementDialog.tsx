@@ -68,7 +68,7 @@ export default function MovementDialog({ item, allowedTypes, availableQuantity, 
           </div>
         ) : null}
         <label className="field"><span>จำนวน ({item.unit})</span>
-          <input type="text" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="เช่น 1.5" autoFocus required />
+          <input type="text" inputMode="text" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="เช่น 1.5 หรือ 1/2" autoFocus required />
         </label>
         <label className="field"><span>โน้ต (ไม่บังคับ)</span>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="เช่น เตรียมหน้าร้าน" />

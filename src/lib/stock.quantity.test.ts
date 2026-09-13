@@ -15,9 +15,18 @@ it('accepts a comma as the decimal separator', () => {
   expect(parseQuantityInput('1,5')).toBe(1.5);
 });
 
-it('rejects non-numeric input like "/" or letters (never throws)', () => {
+it('interprets fractions and mixed numbers', () => {
+  expect(parseQuantityInput('1/2')).toBe(0.5);
+  expect(parseQuantityInput('3/4')).toBe(0.75);
+  expect(parseQuantityInput('10/4')).toBe(2.5);
+  expect(parseQuantityInput('1 1/2')).toBe(1.5); // mixed number
+  expect(parseQuantityInput('1/3')).toBe(0.333); // rounded to 3 decimals
+  expect(parseQuantityInput('5/0')).toBeNull();  // no divide-by-zero
+});
+
+it('rejects non-numeric input like a lone "/" or letters (never throws)', () => {
   expect(parseQuantityInput('/')).toBeNull();
-  expect(parseQuantityInput('1/2')).toBeNull();
+  expect(parseQuantityInput('1/2/3')).toBeNull();
   expect(parseQuantityInput('abc')).toBeNull();
   expect(parseQuantityInput('')).toBeNull();
   expect(parseQuantityInput('.')).toBeNull();
