@@ -61,7 +61,7 @@ export default function ItemStockCard({ balance, onEdit, onRecord, onRestore, on
             { label: "ของเสีย", value: waste, color: COLOR_WASTE },
           ]}
           centerLabel={formatQuantity(onHand)}
-          centerSub={`เหลือ (${item.unit})`}
+          centerSub="คงเหลือ"
         />
         <ul className="stock-legend">
           <li>

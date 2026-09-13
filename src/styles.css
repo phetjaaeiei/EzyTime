@@ -1323,10 +1323,11 @@ tbody tr:hover {
 .stock-group-title { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); font-size: 1rem; }
 .stock-group-title::before { width: 8px; height: 8px; border-radius: 999px; background: var(--primary); content: ""; }
 .stock-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.stock-card { background: var(--bg); border: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); border-radius: 10px; padding: 16px; }
+.stock-card { container-type: inline-size; min-width: 0; display: flex; flex-direction: column; background: var(--bg); border: 1px solid color-mix(in oklab, var(--ink) 8%, transparent); border-radius: 10px; padding: 16px; }
 .stock-card.is-low { border-color: var(--danger); }
 .stock-card.is-out-of-stock { background: color-mix(in oklab, var(--danger-soft) 42%, var(--bg)); }
 .stock-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.stock-card-head > div:first-child { min-width: 0; overflow-wrap: anywhere; }
 .stock-card-head h3 { margin: 0; font-size: 1.05rem; }
 .stock-card-head-actions { display: flex; flex: 0 0 auto; align-items: flex-start; gap: 6px; }
 .stock-delete-button { width: 40px; height: 40px; margin: -8px -8px 0 0; color: var(--danger); }
@@ -1334,14 +1335,19 @@ tbody tr:hover {
 .stock-chip { display: inline-block; margin-top: 4px; font-size: 0.75rem; color: var(--muted); background: var(--surface); padding: 2px 8px; border-radius: 999px; }
 .low-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--danger); }
 .low-badge.is-out { border-radius: 999px; background: var(--danger-soft); padding: 3px 7px; font-weight: 760; }
-.stock-card-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
-.stock-legend { min-width: 0; list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.85rem; }
-.stock-legend li { display: grid; grid-template-columns: 10px minmax(0, 1fr) max-content; align-items: center; gap: 6px; }
-.stock-legend .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+/* Adapt to the card width, including narrow columns on wide screens. */
+.stock-card-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: center; }
+.stock-card-body > .donut { justify-self: center; }
+.stock-legend { min-width: 0; width: 100%; list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 0.85rem; line-height: 1.5; }
+.stock-legend li { display: grid; grid-template-columns: 10px max-content minmax(0, 1fr); align-items: baseline; gap: 8px; }
+.stock-legend .dot { width: 10px; height: 10px; border-radius: 3px; align-self: center; }
 .stock-legend-label,
-.stock-total span { min-width: 0; overflow-wrap: anywhere; }
-.stock-legend strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.stock-legend .stock-total { grid-template-columns: minmax(0, 1fr) max-content; }
+.stock-total > span { white-space: nowrap; }
+.stock-legend strong { min-width: 0; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.stock-legend .stock-total { font-size: inherit; grid-template-columns: max-content minmax(0, 1fr); border-top: 1px solid var(--border); padding-top: 8px; }
+@container (min-width: 24rem) {
+  .stock-card-body { grid-template-columns: 104px minmax(0, 1fr); }
+}
 .low-alert { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 8px; background: color-mix(in oklab, var(--danger) 12%, var(--bg)); color: var(--danger); margin-bottom: 16px; }
 .stock-dot { flex: 0 0 auto; width: 0.55rem; height: 0.55rem; border-radius: 999px; background: var(--primary); }
 .stock-dot.in { background: var(--primary); }
@@ -1362,8 +1368,8 @@ tbody tr:hover {
 .danger-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid var(--danger); border-radius: 8px; background: var(--danger); color: white; padding: 9px 16px; font: inherit; font-weight: 760; cursor: pointer; }
 .danger-button:hover:not(:disabled) { background: color-mix(in oklab, var(--danger) 88%, black); }
 .danger-button:disabled { cursor: not-allowed; opacity: 0.58; }
-.stock-card-actions { display: flex; gap: 8px; margin-top: 12px; }
-.stock-card-actions button { flex: 1; }
+.stock-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 16px; }
+.stock-card-actions button { flex: 1 1 7rem; }
 
 /* ===== Stock: employee list ===== */
 .employee-stock-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; width: min(100%, 1180px); margin-inline: auto; }
@@ -1516,8 +1522,8 @@ tbody tr:hover {
     width: 100%;
   }
 
-  .stock-card-actions {
-    flex-direction: column;
+  .stock-card-actions button {
+    flex-basis: 100%;
   }
 }
 
