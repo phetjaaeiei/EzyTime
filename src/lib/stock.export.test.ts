@@ -41,15 +41,16 @@ it('builds an Excel-openable HTML table; unit is merged into the on-hand cell (n
   expect(html).not.toContain('<th>หน่วย</th>'); // unit column removed
 });
 
-it('centers every cell and tints low (orange) and out-of-stock (red) rows', () => {
+it('centers every cell and colors only the status cell (orange low, red out)', () => {
   const html = buildStockExcelHtml(buildStockExportRows([
     balance('low', 'c', 2, true),  // ใกล้หมด
     balance('out', 'c', 0, false), // หมด
     balance('ok', 'c', 5, false),  // ปกติ
   ])).toLowerCase();
   expect(html).toContain('text-align:center');
-  expect(html).toContain('#ffcc80'); // orange for ใกล้หมด
-  expect(html).toContain('#ef9a9a'); // red for หมด
+  // exactly one tinted cell per low/out row (the status column), not the whole row
+  expect((html.match(/background-color:#ffcc80/g) ?? []).length).toBe(1);
+  expect((html.match(/background-color:#ef9a9a/g) ?? []).length).toBe(1);
 });
 
 it('names the file with an .xls extension', () => {

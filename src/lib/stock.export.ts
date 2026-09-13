@@ -34,7 +34,7 @@ function headerRowHtml(): string {
 }
 
 // The on-hand value carries its unit inline (e.g. "3 ลิตร"), so there is no
-// separate unit column. The whole row is tinted by stock status.
+// separate unit column. Only the status cell (last column) is tinted by status.
 function bodyRowHtml(row: StockExportRow): string {
   const fill = fillFor(row.status);
   const cells = [
@@ -44,7 +44,7 @@ function bodyRowHtml(row: StockExportRow): string {
     row.threshold == null ? "" : String(row.threshold),
     escapeHtml(row.status),
   ];
-  return `<tr>${cells.map((cell) => cellHtml(cell, "td", fill)).join("")}</tr>`;
+  return `<tr>${cells.map((cell, index) => cellHtml(cell, "td", index === cells.length - 1 ? fill : "")).join("")}</tr>`;
 }
 
 function statusOf(balance: ItemBalance): string {
