@@ -3,7 +3,7 @@ import { Loader2, Save } from "lucide-react";
 import type { MovementType, StockItem } from "../../types";
 import { getEmployeeStockAccess } from "../../lib/stock.permissions";
 import { recordMovement } from "../../lib/stock";
-import { formatQuantity } from "../../lib/stock.calc";
+import { formatQuantity, parseQuantityInput } from "../../lib/stock.calc";
 import { Dialog } from "./ItemFormDialog";
 
 interface Props {
@@ -26,9 +26,9 @@ export default function MovementDialog({ item, allowedTypes, availableQuantity, 
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const qty = Number(quantity);
-    if (!Number.isFinite(qty) || qty <= 0) {
-      setError("จำนวนต้องมากกว่า 0");
+    const qty = parseQuantityInput(quantity);
+    if (qty === null || qty <= 0) {
+      setError("จำนวนต้องเป็นตัวเลขมากกว่า 0");
       return;
     }
     if (type !== "in" && availableQuantity !== undefined && qty > availableQuantity) {
@@ -68,7 +68,7 @@ export default function MovementDialog({ item, allowedTypes, availableQuantity, 
           </div>
         ) : null}
         <label className="field"><span>จำนวน ({item.unit})</span>
-          <input type="number" min="0" max={type === "in" ? undefined : availableQuantity} step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} autoFocus required />
+          <input type="text" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="เช่น 1.5" autoFocus required />
         </label>
         <label className="field"><span>โน้ต (ไม่บังคับ)</span>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="เช่น เตรียมหน้าร้าน" />

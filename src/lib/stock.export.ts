@@ -1,5 +1,6 @@
-import type { ItemBalance } from "../types";
-import { formatDateInput } from "./time";
+import type { ItemBalance, StockItem, StockMovement } from "../types";
+import { computeItemBalances } from "./stock.calc";
+import { formatDateInput, getLocalDayRange } from "./time";
 
 export interface StockExportRow {
   category: string;
@@ -61,12 +62,76 @@ export function stockExportFilename(date = new Date()): string {
 }
 
 export function exportStockExcel(balances: ItemBalance[]): void {
-  const html = buildStockExcelHtml(buildStockExportRows(balances));
+  triggerDownload(buildStockExcelHtml(buildStockExportRows(balances)), stockExportFilename());
+}
+
+export interface StockDaySheet {
+  name: string;
+  rows: StockExportRow[];
+}
+
+// One end-of-day snapshot per day from the first recorded movement to today,
+// reconstructed from the movement ledger (no separate storage needed).
+export function stockDailySnapshots(items: StockItem[], movements: StockMovement[], today: Date = new Date()): StockDaySheet[] {
+  const todayStr = formatDateInput(today);
+  let startStr = todayStr;
+  for (const movement of movements) {
+    const dayStr = formatDateInput(new Date(movement.created_at));
+    if (dayStr < startStr) startStr = dayStr;
+  }
+
+  const sheets: StockDaySheet[] = [];
+  const cursor = new Date(getLocalDayRange(startStr).start);
+  const endBound = getLocalDayRange(todayStr).end.getTime();
+  while (cursor.getTime() < endBound) {
+    const dayStr = formatDateInput(cursor);
+    const cutoff = getLocalDayRange(dayStr).end.getTime();
+    const itemsAsOf = items.filter((item) => !item.created_at || Date.parse(item.created_at) < cutoff);
+    const movesAsOf = movements.filter((movement) => Date.parse(movement.created_at) < cutoff);
+    sheets.push({ name: dayStr, rows: buildStockExportRows(computeItemBalances(itemsAsOf, movesAsOf)) });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return sheets;
+}
+
+// Multiple worksheets in one .xls: each <table> becomes a sheet, named in order
+// by the <x:ExcelWorksheets> block (the classic Excel-HTML multi-sheet trick).
+export function buildStockWorkbookHtml(sheets: StockDaySheet[]): string {
+  const head = HEADERS.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
+  const names = sheets
+    .map((sheet) => `<x:ExcelWorksheet><x:Name>${escapeHtml(sheet.name)}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>`)
+    .join("");
+  const tables = sheets
+    .map((sheet) => {
+      const body = sheet.rows
+        .map((row) => {
+          const cells = [
+            escapeHtml(row.category),
+            escapeHtml(row.name),
+            escapeHtml(row.unit),
+            String(row.onHand),
+            row.threshold == null ? "" : String(row.threshold),
+            escapeHtml(row.status),
+          ];
+          return `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`;
+        })
+        .join("");
+      return `<table border="1"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+    })
+    .join("");
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>${names}</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>${tables}</body></html>`;
+}
+
+export function exportStockDailyWorkbook(items: StockItem[], movements: StockMovement[]): void {
+  triggerDownload(buildStockWorkbookHtml(stockDailySnapshots(items, movements)), stockExportFilename());
+}
+
+function triggerDownload(html: string, filename: string): void {
   const blob = new Blob(["﻿", html], { type: "application/vnd.ms-excel;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = stockExportFilename();
+  anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
 }

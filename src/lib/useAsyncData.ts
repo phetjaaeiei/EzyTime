@@ -5,6 +5,7 @@ const DEFAULT_ERROR = "โหลดข้อมูลไม่สำเร็จ
 export interface AsyncData<T> {
   data: T;
   loading: boolean;
+  refreshing: boolean;
   error: string;
   reload: () => void;
 }
@@ -23,6 +24,7 @@ export interface AsyncData<T> {
 export function useAsyncData<T>(loader: () => Promise<T>, initial: T): AsyncData<T> {
   const [data, setData] = useState<T>(initial);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const loaderRef = useRef(loader);
   const mountedRef = useRef(true);
@@ -40,20 +42,25 @@ export function useAsyncData<T>(loader: () => Promise<T>, initial: T): AsyncData
           if (mountedRef.current) {
             setData(next);
             setLoading(false);
+            setRefreshing(false);
           }
         },
         (cause) => {
           if (mountedRef.current) {
             setError(cause instanceof Error ? cause.message : DEFAULT_ERROR);
             setLoading(false);
+            setRefreshing(false);
           }
         },
       ),
     [],
   );
 
+  // reload() keeps the current data on screen (stale-while-revalidate) instead of
+  // blanking to a skeleton — so a refresh after saving does not collapse the list
+  // height and scroll the page back to the top.
   const reload = useCallback(() => {
-    setLoading(true);
+    setRefreshing(true);
     setError("");
     void applyResult();
   }, [applyResult]);
@@ -66,5 +73,5 @@ export function useAsyncData<T>(loader: () => Promise<T>, initial: T): AsyncData
     };
   }, [applyResult]);
 
-  return { data, loading, error, reload };
+  return { data, loading, refreshing, error, reload };
 }

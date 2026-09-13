@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Loader2, Save, X } from "lucide-react";
 import type { ItemBalance, NewStockItem, StockItem } from "../../types";
 import { archiveItem, createItem, setStockBalanceTotals, updateItem } from "../../lib/stock";
-import { formatQuantity } from "../../lib/stock.calc";
+import { formatQuantity, parseQuantityInput } from "../../lib/stock.calc";
 
 const CUSTOM_OPTION_VALUE = "__custom__";
 
@@ -44,25 +44,22 @@ export default function ItemFormDialog({
       setError("กรุณากรอกชื่อสินค้าและหน่วย");
       return;
     }
+    const thresholdValue = threshold.trim() === "" ? null : parseQuantityInput(threshold);
+    if (threshold.trim() !== "" && (thresholdValue === null || thresholdValue < 0)) {
+      setError("จุดแจ้งเตือนต้องเป็นตัวเลขที่ไม่ติดลบ");
+      return;
+    }
     const payload: NewStockItem = {
       name,
       unit,
       category: category.trim() || null,
-      low_stock_threshold: threshold.trim() === "" ? null : Number(threshold),
+      low_stock_threshold: thresholdValue,
     };
-    if (
-      payload.low_stock_threshold !== null &&
-      (Number.isNaN(payload.low_stock_threshold) || payload.low_stock_threshold < 0)
-    ) {
-      setError("จุดแจ้งเตือนต้องเป็นตัวเลขที่ไม่ติดลบ");
-      return;
-    }
-    const desiredReceived = item ? Number(received) : null;
-    const desiredOnHand = item ? Number(onHand) : null;
+    const desiredReceived = item ? parseQuantityInput(received) : null;
+    const desiredOnHand = item ? parseQuantityInput(onHand) : null;
     if (
       item &&
-      (desiredReceived === null || !Number.isFinite(desiredReceived) || desiredReceived < 0 ||
-        desiredOnHand === null || !Number.isFinite(desiredOnHand) || desiredOnHand < 0)
+      (desiredReceived === null || desiredReceived < 0 || desiredOnHand === null || desiredOnHand < 0)
     ) {
       setError("จำนวนรับเข้าและคงเหลือต้องเป็นตัวเลขที่ไม่ติดลบ");
       return;
@@ -159,10 +156,10 @@ export default function ItemFormDialog({
         {item && balance ? (
           <div className="stock-balance-editor">
             <label className="field"><span>รับเข้าทั้งหมด ({unit.trim() || item.unit})</span>
-              <input type="number" min="0" step="any" value={received} onChange={(e) => setReceived(e.target.value)} required />
+              <input type="text" inputMode="decimal" value={received} onChange={(e) => setReceived(e.target.value)} required />
             </label>
             <label className="field"><span>จำนวนคงเหลือ ({unit.trim() || item.unit})</span>
-              <input type="number" min="0" step="any" value={onHand} onChange={(e) => setOnHand(e.target.value)} required />
+              <input type="text" inputMode="decimal" value={onHand} onChange={(e) => setOnHand(e.target.value)} required />
             </label>
             <small className="field-hint">
               ของเสียสะสม {formatQuantity(balance.waste)} {item.unit} ระบบจะคำนวณยอดเบิกใช้และปรับประวัติให้ตรงกับจำนวนใหม่
@@ -170,7 +167,7 @@ export default function ItemFormDialog({
           </div>
         ) : null}
         <label className="field"><span>แจ้งเตือนเมื่อเหลือน้อยกว่า (ไม่บังคับ)</span>
-          <input type="number" min="0" step="any" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="เช่น 5" />
+          <input type="text" inputMode="decimal" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder="เช่น 5" />
         </label>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         <button className="primary-button" type="submit" disabled={saving}>

@@ -14,7 +14,7 @@ export default function StockOverview() {
     const [items, movements] = await Promise.all([listItems(), listMovements()]);
     return { items, movements };
   }, []);
-  const { data, loading, error, reload } = useAsyncData(loadStock, {
+  const { data, loading, refreshing, error, reload } = useAsyncData(loadStock, {
     items: [] as StockItem[],
     movements: [] as StockMovement[],
   });
@@ -37,8 +37,8 @@ export default function StockOverview() {
             <CalendarDays size={17} />
             <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} aria-label="เลือกวันที่" />
           </label>
-          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading}>
-            {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
+          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading || refreshing}>
+            {loading || refreshing ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
           </button>
         </div>

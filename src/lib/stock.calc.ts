@@ -74,7 +74,18 @@ export function buildDonutArcs(slices: DonutSlice[], circumference: number): Don
 }
 
 export function formatQuantity(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
+  return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/\.?0+$/, "");
+}
+
+// Parse a free-typed quantity: accepts digits + one decimal point (comma allowed),
+// keeps up to 3 decimals without spinner rounding, and returns null for anything
+// that is not a number (so a text input can be used, yet "/" or letters are rejected).
+export function parseQuantityInput(text: string): number | null {
+  const trimmed = text.trim().replace(/,/g, ".");
+  if (trimmed === "" || trimmed === "." || !/^\d*\.?\d*$/.test(trimmed)) return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value)) return null;
+  return Math.round(value * 1000) / 1000;
 }
 
 function round(value: number): number {

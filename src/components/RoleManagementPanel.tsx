@@ -7,7 +7,7 @@ const CHOICES: (AssignableRole | null)[] = [null, ...ASSIGNABLE_ROLES];
 
 export default function RoleManagementPanel() {
   const load = useCallback(() => listStaffRoles(), []);
-  const { data, loading, error, reload } = useAsyncData<StaffMember[]>(load, []);
+  const { data, loading, refreshing, error, reload } = useAsyncData<StaffMember[]>(load, []);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState("");
   const [message, setMessage] = useState("");
@@ -42,8 +42,8 @@ export default function RoleManagementPanel() {
           <p className="muted-copy">ตั้ง CEO หรือ Manager (สิทธิ์เท่า admin ทุกอย่าง) ให้ผู้ใช้ที่เข้าสู่ระบบแล้ว — เฉพาะ admin เท่านั้นที่ตั้งได้</p>
         </div>
         <div className="admin-actions">
-          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading}>
-            {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
+          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading || refreshing}>
+            {loading || refreshing ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
           </button>
         </div>

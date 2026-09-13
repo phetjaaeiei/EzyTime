@@ -4,6 +4,7 @@ import {
   Eye,
   EyeOff,
   FileSpreadsheet,
+  FolderMinus,
   Loader2,
   PackageSearch,
   Plus,
@@ -15,7 +16,7 @@ import type { ItemBalance, StockItem, StockMovement } from "../../types";
 import { isOpeningBalanceMovement, listItems, listMovements, updateItem } from "../../lib/stock";
 import { computeItemBalances, findLowStockItems, formatQuantity } from "../../lib/stock.calc";
 import { matchesStockSearch } from "../../lib/stock.search";
-import { exportStockExcel } from "../../lib/stock.export";
+import { exportStockDailyWorkbook } from "../../lib/stock.export";
 import { useAsyncData } from "../../lib/useAsyncData";
 import { formatDateInput, formatDateTime, formatThaiDate } from "../../lib/time";
 import ItemStockCard from "./ItemStockCard";
@@ -23,6 +24,7 @@ import ItemFormDialog from "./ItemFormDialog";
 import DeleteItemDialog from "./DeleteItemDialog";
 import MovementDialog from "./MovementDialog";
 import ClearHistoryDialog from "./ClearHistoryDialog";
+import ClearCategoryDialog from "./ClearCategoryDialog";
 import StockOrderEditor from "./StockOrderEditor";
 import { useStockOrder } from "../../lib/useStockOrder";
 import { groupByCategoryOrdered } from "../../lib/stock.layout";
@@ -38,6 +40,7 @@ export default function StockDashboard() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [clearingHistory, setClearingHistory] = useState(false);
+  const [clearingCategory, setClearingCategory] = useState<{ category: string; itemIds: string[] } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -45,7 +48,7 @@ export default function StockDashboard() {
     const [items, movements] = await Promise.all([listItems({ includeArchived: true }), listMovements()]);
     return { items, movements };
   }, []);
-  const { data, loading, error, reload } = useAsyncData(loadStock, {
+  const { data, loading, refreshing, error, reload } = useAsyncData(loadStock, {
     items: [] as StockItem[],
     movements: [] as StockMovement[],
   });
@@ -113,7 +116,7 @@ export default function StockDashboard() {
           <button className="icon-text-button" type="button" aria-pressed={selecting} onClick={() => { setSelecting(value => !value); setSelectedIds([]); setDeleteMessage(""); }}><Trash2 size={17} /> {selecting ? "ยกเลิกการเลือก" : "เลือกลบสินค้า"}</button>
           <button className="icon-text-button" type="button" aria-expanded={showPermissions} onClick={() => setShowPermissions((value) => !value)}>สิทธิ์จัดการสต๊อก</button>
           <button className="icon-text-button" type="button" onClick={() => setEditing("new")}><Plus size={17} /> เพิ่มสินค้า</button>
-          <button className="icon-text-button" type="button" onClick={() => exportStockExcel(activeBalances)} disabled={!activeBalances.length}><FileSpreadsheet size={17} /> Export Excel</button>
+          <button className="icon-text-button" type="button" onClick={() => exportStockDailyWorkbook(items, movements)} disabled={!items.length}><FileSpreadsheet size={17} /> Export Excel</button>
           {archivedCount > 0 ? (
             <button
               className={showArchived ? "icon-text-button" : "icon-text-button quiet"}
@@ -125,8 +128,8 @@ export default function StockDashboard() {
               {showArchived ? "ซ่อนที่ปิดใช้งาน" : `ที่ปิดใช้งาน (${archivedCount})`}
             </button>
           ) : null}
-          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading}>
-            {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
+          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading || refreshing}>
+            {loading || refreshing ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
           </button>
         </div>
@@ -178,7 +181,18 @@ export default function StockDashboard() {
       ) : searchedBalances.length ? (
         grouped.map(([category, group]) => (
           <section key={category} className="stock-group" aria-label={category}>
-            <h2 className="stock-group-title">{category}</h2>
+            <div className="stock-group-head">
+              <h2 className="stock-group-title">{category}</h2>
+              {!selecting && category !== "ไม่ระบุหมวดหมู่" ? (
+                <button
+                  type="button"
+                  className="icon-text-button quiet"
+                  onClick={() => setClearingCategory({ category, itemIds: items.filter((it) => (it.category?.trim() || "ไม่ระบุหมวดหมู่") === category).map((it) => it.id) })}
+                >
+                  <FolderMinus size={16} /> ลบหมวดหมู่
+                </button>
+              ) : null}
+            </div>
             <div className="stock-card-grid">
               {group.map((balance) =>
                 balance.item.is_active ? (
@@ -253,6 +267,14 @@ export default function StockDashboard() {
           historyCount={visibleMovementCount}
           onClose={() => setClearingHistory(false)}
           onCleared={() => { setClearingHistory(false); void reload(); }}
+        />
+      ) : null}
+      {clearingCategory ? (
+        <ClearCategoryDialog
+          category={clearingCategory.category}
+          itemIds={clearingCategory.itemIds}
+          onClose={() => setClearingCategory(null)}
+          onCleared={() => { setDeleteMessage(`ลบหมวดหมู่ “${clearingCategory.category}” แล้ว (ย้ายสินค้าไปไม่ระบุหมวดหมู่)`); setClearingCategory(null); void reload(); }}
         />
       ) : null}
     </section>

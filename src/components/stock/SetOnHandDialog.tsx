@@ -3,7 +3,7 @@ import { Loader2, Save } from "lucide-react";
 import type { StockItem } from "../../types";
 import { getEmployeeStockAccess } from "../../lib/stock.permissions";
 import { adjustOnHandTo } from "../../lib/stock";
-import { formatQuantity } from "../../lib/stock.calc";
+import { formatQuantity, parseQuantityInput } from "../../lib/stock.calc";
 import { Dialog } from "./ItemFormDialog";
 
 interface Props {
@@ -20,8 +20,8 @@ export default function SetOnHandDialog({ item, currentOnHand, onClose, onSaved 
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const target = Number(value);
-    if (!Number.isFinite(target) || target < 0) { setError("ยอดคงเหลือต้องไม่ติดลบ"); return; }
+    const target = parseQuantityInput(value);
+    if (target === null || target < 0) { setError("ยอดคงเหลือต้องเป็นตัวเลขไม่ติดลบ"); return; }
     setError(""); setSaving(true);
     try {
       const access = await getEmployeeStockAccess();
@@ -39,7 +39,7 @@ export default function SetOnHandDialog({ item, currentOnHand, onClose, onSaved 
       <form className="clock-form" onSubmit={handleSubmit}>
         <p className="muted-copy">คงเหลือปัจจุบัน {formatQuantity(currentOnHand)} {item.unit} — ระบบจะบันทึกเป็นรายการปรับยอด (ไม่ลบประวัติเดิม)</p>
         <label className="field"><span>ยอดคงเหลือใหม่ ({item.unit})</span>
-          <input type="number" min="0" step="any" value={value} onChange={(event) => setValue(event.target.value)} autoFocus required />
+          <input type="text" inputMode="decimal" value={value} onChange={(event) => setValue(event.target.value)} placeholder="เช่น 1.5" autoFocus required />
         </label>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         <button className="primary-button" type="submit" disabled={saving}>

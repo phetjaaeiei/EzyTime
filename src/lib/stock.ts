@@ -149,6 +149,21 @@ export async function archiveItem(id: string): Promise<void> {
   await updateItem(id, { is_active: false });
 }
 
+// Remove a category label from its items — they keep their stock, just move to
+// "ไม่ระบุหมวดหมู่". Not a delete of any item.
+export async function clearItemCategory(itemIds: string[]): Promise<void> {
+  if (!itemIds.length) return;
+  if (supabase) {
+    const { error } = await supabase.from("stock_items").update({ category: null }).in("id", itemIds);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  const items = readLocal(ITEMS_KEY, demoItems).map((item) =>
+    itemIds.includes(item.id) ? { ...item, category: null, updated_at: nowIso() } : item,
+  );
+  writeLocal(ITEMS_KEY, items);
+}
+
 // ---------- movements ----------
 export async function listMovements(
   options: { itemId?: string; mine?: boolean } = {},

@@ -19,7 +19,7 @@ export default function StockLog() {
     const [items, movements] = await Promise.all([listItems({ includeArchived: true }), listMovements()]);
     return { items, movements };
   }, []);
-  const { data, loading, error, reload } = useAsyncData(load, { items: [] as StockItem[], movements: [] as StockMovement[] });
+  const { data, loading, refreshing, error, reload } = useAsyncData(load, { items: [] as StockItem[], movements: [] as StockMovement[] });
   const { items, movements } = data;
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | StockMovement["type"]>("all");
@@ -47,8 +47,8 @@ export default function StockLog() {
           <p className="muted-copy">ใครรับเข้า / เบิก / ปรับยอด อะไร เมื่อไหร่</p>
         </div>
         <div className="admin-actions">
-          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading}>
-            {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
+          <button className="icon-text-button" type="button" onClick={() => void reload()} disabled={loading || refreshing}>
+            {loading || refreshing ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
             รีเฟรช
           </button>
         </div>
