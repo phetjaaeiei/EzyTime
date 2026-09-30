@@ -112,7 +112,7 @@ for the project owner, one-time:
    Client ID + Client Secret from step 1 → enable.
 3. **Supabase Dashboard** → Authentication → URL Configuration → add to
    allowed redirect URLs:
-   - `https://ezytime.phetjaa.workers.dev/clock`
+  - `https://haekpak.ezycloud.workers.dev/clock`
    - `http://localhost:5183/clock` (or whatever local dev port is in use)
 
 Until this is done, the Google button will fail at the provider step —

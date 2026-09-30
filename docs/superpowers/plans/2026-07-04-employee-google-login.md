@@ -1326,7 +1326,7 @@ Find the `## Deploy ฟรี` heading and insert this new section immediately b
 3. คัดลอก Client ID และ Client Secret ที่ได้
 4. ไปที่ Supabase Dashboard > Authentication > Providers > Google แล้ววางค่าทั้งสอง จากนั้นเปิดใช้งาน provider
 5. ไปที่ Supabase Dashboard > Authentication > URL Configuration แล้วเพิ่ม redirect URL ที่อนุญาต:
-   - โดเมนที่ deploy จริง เช่น `https://ezytime.phetjaa.workers.dev/clock`
+   - โดเมนที่ deploy จริง เช่น `https://haekpak.ezycloud.workers.dev/clock`
    - `http://localhost:5173/clock` (สำหรับ dev บนเครื่อง)
 
 พนักงานที่สแกน QR แล้วกด "เข้าสู่ระบบด้วย Google" ครั้งแรกจะถูกขอตั้งชื่อเล่นหนึ่งครั้ง ครั้งต่อไประบบจำได้อัตโนมัติ ไม่ต้องพิมพ์ชื่อซ้ำ

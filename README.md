@@ -46,8 +46,9 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
 2. ใส่ Authorized redirect URI เป็น `https://<your-project-ref>.supabase.co/auth/v1/callback`
 3. คัดลอก Client ID และ Client Secret ที่ได้
 4. ไปที่ Supabase Dashboard > Authentication > Providers > Google แล้ววางค่าทั้งสอง จากนั้นเปิดใช้งาน provider
-5. ไปที่ Supabase Dashboard > Authentication > URL Configuration แล้วเพิ่ม redirect URL ที่อนุญาต:
-   - โดเมนที่ deploy จริง เช่น `https://ezytime.phetjaa.workers.dev/clock`
+5. ไปที่ Supabase Dashboard > Authentication > URL Configuration แล้วตั้งค่า:
+   - Site URL: `https://haekpak.ezycloud.workers.dev`
+   - Redirect URL ของ production: `https://haekpak.ezycloud.workers.dev/clock`
    - `http://localhost:5173/clock` (สำหรับ dev บนเครื่อง)
 
 ถ้าเป็น Supabase project เดิมที่เคยรัน `schema.sql` เวอร์ชันก่อนหน้าไปแล้ว ต้องกลับไปรัน [supabase/schema.sql](supabase/schema.sql) เวอร์ชันล่าสุดใน Supabase SQL Editor อีกครั้งก่อน deploy build นี้ (สคริปต์เขียนให้รันซ้ำได้อย่างปลอดภัย) เพราะเวอร์ชันล่าสุดเพิ่มคอลัมน์ `time_logs.user_id` และเปลี่ยน insert policy ใหม่ ถ้าไม่รันซ้ำ พนักงานจะบันทึกเวลาเข้า-ออกงานไม่ได้เลยหลัง deploy
