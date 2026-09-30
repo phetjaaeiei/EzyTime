@@ -1,4 +1,4 @@
-import type { AuthSession, EmployeeSession, NewTimeLog, TimeLog } from "../types";
+import type { AuthSession, EmployeeSession, NewTimeLog, StaffRole, TimeLog } from "../types";
 import { formatDateInput, getLocalDayRange } from "./time";
 import { extractNickname } from "./employee";
 import { isSupabaseConfigured, supabase } from "./supabase";
@@ -140,12 +140,17 @@ export function getDefaultDate(): string {
 }
 
 export async function signInAdmin(email: string, password: string): Promise<AuthSession> {
-  if (!supabase) return { email: "demo@local", isDemo: true };
+  if (!supabase) return { email: "demo@local", isDemo: true, role: "admin" };
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
 
-  return { email: data.user.email ?? email, isDemo: false };
+  const role = await getAdminRole(data.user.id);
+  if (!role) {
+    await supabase.auth.signOut();
+    throw new Error("บัญชีนี้ไม่มีสิทธิ์เข้าหน้าผู้ดูแล");
+  }
+  return { email: data.user.email ?? email, isDemo: false, role };
 }
 
 export async function signOutCurrentUser(): Promise<void> {
@@ -155,39 +160,47 @@ export async function signOutCurrentUser(): Promise<void> {
   }
 }
 
-async function isAdminUser(userId: string): Promise<boolean> {
-  if (!supabase) return false;
-  const { data, error } = await supabase.from("admin_users").select("user_id").eq("user_id", userId).maybeSingle();
-  if (error) return false;
-  return Boolean(data);
+async function getAdminRole(userId: string): Promise<StaffRole | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("admin_users").select("role").eq("user_id", userId).maybeSingle();
+  if (error || !data) return null;
+  return data.role === "ceo" || data.role === "manager" ? data.role : "admin";
 }
 
 export async function getCurrentSession(): Promise<AuthSession | null> {
-  if (!isSupabaseConfigured || !supabase) return { email: "demo@local", isDemo: true };
+  if (!isSupabaseConfigured || !supabase) return { email: "demo@local", isDemo: true, role: "admin" };
 
   const { data, error } = await supabase.auth.getSession();
   if (error) throw new Error(error.message);
   if (!data.session) return null;
 
-  const isAdmin = await isAdminUser(data.session.user.id);
-  if (!isAdmin) return null;
+  const role = await getAdminRole(data.session.user.id);
+  if (!role) return null;
 
-  return { email: data.session.user.email ?? undefined, isDemo: false };
+  return { email: data.session.user.email ?? undefined, isDemo: false, role };
 }
 
-export function onAuthChange(callback: (session: AuthSession | null) => void): () => void {
+export async function hasActiveSession(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data } = await supabase.auth.getSession();
+  return Boolean(data.session);
+}
+
+// Second arg tells the admin screen whether someone is signed in but lacks an
+// admin/ceo/manager role (so it can offer sign-out instead of a login form).
+export function onAuthChange(callback: (session: AuthSession | null, signedIn: boolean) => void): () => void {
   if (!supabase) return () => undefined;
 
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
     if (!session) {
-      callback(null);
+      callback(null, false);
       return;
     }
 
-    isAdminUser(session.user.id).then((isAdmin) => {
-      callback(isAdmin ? { email: session.user.email ?? undefined, isDemo: false } : null);
+    getAdminRole(session.user.id).then((role) => {
+      callback(role ? { email: session.user.email ?? undefined, isDemo: false, role } : null, true);
     });
   });
 
@@ -199,6 +212,17 @@ export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: `${window.location.origin}/clock` },
+  });
+  if (error) throw new Error(error.message);
+}
+
+// Admin console sign-in for elevated Google users (CEO/Manager, or admins who
+// prefer Google) — returns to "/" where the role is resolved.
+export async function signInWithGoogleAdmin(): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${window.location.origin}/` },
   });
   if (error) throw new Error(error.message);
 }
@@ -247,7 +271,7 @@ export function exportLogsCsv(rows: TimeLog[]): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `ezytime-${formatDateInput(new Date())}.csv`;
+  anchor.download = `haekpak-shabu-${formatDateInput(new Date())}.csv`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
